@@ -1,0 +1,3142 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8"/>
+    <title>Analyse Flux Financier</title>
+    <script src=https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js></script>
+    <script src=https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js></script>
+    <script src=https://html2canvas.hertzen.com/dist/html2canvas.min.js></script>
+    <link href=https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css rel="stylesheet"/>
+    <meta content="#007BFF" name="theme-color"/>
+
+    <style>
+        :root {
+          --primary: #0056b3; /* Bleu design */
+          --secondary: #6c757d;
+          --success: #28a745;
+          --danger: #dc3545;
+          --light: #f8f9fa;
+          --gradient: linear-gradient(135deg, var(--primary) 0%, #007bff 100%);
+        }
+        
+        body {
+          font-family: 'Segoe UI', system-ui, sans-serif;
+          background: #f8fafc;
+          margin: 0;
+          padding: 0;
+          line-height: 1.6;
+          color: #333;
+        }
+        
+        .header {
+          background: var(--gradient);
+          color: white;
+          padding: 3rem 2rem;
+          text-align: center;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+          margin-bottom: 2rem;
+          position: relative;
+          overflow: hidden;
+        }
+        
+        .header h1 {
+          margin: 0 0 0.5rem 0;
+          font-size: 2.8rem;
+          letter-spacing: 2px;
+          text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+          position: relative;
+          display: inline-block;
+          padding-bottom: 1rem;
+        }
+        
+        .header h1::after {
+          content: "";
+          position: absolute;
+          bottom: 0;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 60%;
+          height: 3px;
+          background: rgba(255, 255, 255, 0.5);
+          border-radius: 2px;
+        }
+        
+        .author-signature {
+          font-style: italic;
+          font-size: 1rem;
+          margin-top: 0.5rem;
+          opacity: 0.9;
+        }
+        
+        .version-info {
+          font-size: 0.9rem;
+          margin-top: 0.25rem;
+          opacity: 0.8;
+        }
+        
+        .container {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 0 1.5rem;
+        }
+        
+        .tabs {
+          display: flex;
+          justify-content: center;
+          gap: 1rem;
+          margin-bottom: 2rem;
+          flex-wrap: wrap;
+        }
+        
+        .tab-button {
+          padding: 1rem 2rem;
+          border: none;
+          border-radius: 8px;
+          background: #e9ecef;
+          cursor: pointer;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          font-weight: 600;
+          color: #495057;
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .tab-button:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .tab-button.active {
+          background: var(--primary);
+          color: white;
+          box-shadow: 0 4px 12px rgba(0, 123, 255, 0.2);
+        }
+        
+        .tab-content {
+          display: none;
+          background: white;
+          border-radius: 12px;
+          padding: 2rem;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+          margin-bottom: 2rem;
+          border: 1px solid #e9ecef;
+        }
+        
+        .tab-content.active {
+          display: block;
+          animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .upload-section {
+          text-align: center;
+          margin: 3rem 0;
+          position: relative;
+        }
+        
+        .upload-section h1 {
+          color: var(--primary);
+          margin-bottom: 1.5rem;
+          font-size: 1.8rem;
+        }
+        
+        .upload-label {
+          display: inline-flex;
+          align-items: center;
+          gap: 1rem;
+          padding: 1.5rem 3rem;
+          background: var(--primary);
+          color: white;
+          border-radius: 12px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 12px rgba(0, 123, 255, 0.2);
+          font-weight: 600;
+          border: 2px solid transparent;
+        }
+        
+        .upload-label:hover {
+          background: #004085;
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(0, 123, 255, 0.3);
+        }
+        
+        input[type="file"] {
+          display: none;
+        }
+        
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+          gap: 2rem;
+          margin: 2.5rem 0;
+        }
+        
+        .loading-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(255, 255, 255, 0.95);
+          display: none;
+          place-items: center;
+          z-index: 1000;
+          backdrop-filter: blur(4px);
+        }
+        
+        .spinner {
+          width: 60px;
+          height: 60px;
+          border: 4px solid rgba(0, 0, 0, 0.1);
+          border-top: 4px solid var(--primary);
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        
+        .error-message {
+          color: white;
+          background: var(--danger);
+          padding: 1rem 1.5rem;
+          border-radius: 8px;
+          margin: 1.5rem auto;
+          display: none;
+          width: fit-content;
+          font-weight: 500;
+          box-shadow: 0 2px 8px rgba(220, 53, 69, 0.2);
+        }
+        
+        .typologie-group {
+          background: white;
+          border-radius: 12px;
+          margin: 1.5rem 0;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+          border: 1px solid #f1f3f5;
+        }
+        
+        .typologie-header {
+          padding: 1.25rem 1.5rem;
+          background: var(--gradient);
+          color: white;
+          cursor: pointer;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          border-radius: 12px 12px 0 0;
+          transition: background 0.3s ease;
+        }
+        
+        .typologie-header:hover {
+          background: linear-gradient(135deg, var(--primary) 0%, #004085 100%);
+        }
+        
+        .sous-typologie-row {
+          display: grid;
+          grid-template-columns: 30px 1fr 1fr 1.5fr 1fr 1fr 1fr;
+          padding: 1rem 1.5rem;
+          border-bottom: 1px solid #f1f3f5;
+          gap: 1.5rem;
+          align-items: center;
+          transition: background 0.2s ease;
+        }
+        
+        .sous-typologie-row:hover {
+          background: #f8f9fa;
+        }
+        
+        .sous-typologie-header {
+          font-weight: 600;
+          color: var(--primary);
+          background: #f8f9fa;
+          border-radius: 8px;
+          padding: 1rem 1.5rem;
+        }
+        
+        .expanded-details {
+          padding: 1rem;
+          background: #f8f9fa;
+          border-radius: 0 0 12px 12px;
+          grid-column: 1 / -1;
+        }
+        
+        .transaction-detail {
+          padding: 0.75rem 1rem;
+          font-size: 0.9em;
+          color: #495057;
+          display: grid;
+          grid-template-columns: 1fr 1fr 2fr 1fr;
+          gap: 1.5rem;
+          background: white;
+          margin: 0.5rem 0;
+          border-radius: 6px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        
+        .rapport-section {
+          margin-bottom: 2.5rem;
+          background: white;
+          padding: 1.5rem;
+          border-radius: 12px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+          border: 1px solid #f1f3f5;
+        }
+        
+        details {
+          margin-bottom: 1.5rem;
+          background: white;
+          border-radius: 12px;
+          overflow: hidden;
+        }
+        
+        summary {
+          padding: 1.25rem 2rem;
+          background: var(--light);
+          cursor: pointer;
+          font-weight: 600;
+          color: var(--primary);
+          list-style: none;
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          transition: background 0.2s ease;
+          position: relative;
+        }
+        
+        summary::-webkit-details-marker {
+          display: none;
+        }
+        
+        summary:hover {
+          background: #e9ecef;
+        }
+        
+        .destinataire-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+          gap: 1.5rem;
+          padding: 1.5rem;
+        }
+        
+        .destinataire-card {
+          background: white;
+          padding: 1.5rem;
+          border-radius: 12px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+          border: 1px solid #f1f3f5;
+          transition: transform 0.2s ease;
+        }
+        
+        .destinataire-card:hover {
+          transform: translateY(-3px);
+        }
+        
+        .synthese-item {
+          display: grid;
+          grid-template-columns: 2fr 1fr 1fr;
+          gap: 1.5rem;
+          padding: 1rem;
+          border-bottom: 1px solid #f1f3f5;
+          align-items: center;
+        }
+        
+        .export-btn {
+          position: fixed;
+          bottom: 2rem;
+          right: 2rem;
+          padding: 1rem 2rem;
+          background: var(--success);
+          color: white;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+          transition: all 0.3s ease;
+          z-index: 100;
+        }
+        
+        .export-btn:hover {
+          background: #218838;
+          transform: translateY(-2px);
+        }
+        
+        .metric-card {
+          background: white;
+          padding: 2rem;
+          border-radius: 12px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+          text-align: center;
+          border-left: 4px solid var(--primary);
+        }
+        
+        .metric-card h4 {
+          color: var(--primary);
+          margin: 0 0 1rem 0;
+        }
+        
+        .metric-card p {
+          font-size: 1.5rem;
+          font-weight: 700;
+          margin: 0;
+        }
+        
+        .flux-grid {
+          display: grid;
+          gap: 1rem;
+          margin-top: 1rem;
+        }
+        
+        .flux-item {
+          padding: 1rem;
+          border-radius: 8px;
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+        
+        .flux-item.positive {
+          background: rgba(40, 167, 69, 0.1);
+          border: 1px solid rgba(40, 167, 69, 0.2);
+        }
+        
+        .flux-item.negative {
+          background: rgba(220, 53, 69, 0.1);
+          border: 1px solid rgba(220, 53, 69, 0.2);
+        }
+        
+        .flux-header {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          color: var(--primary);
+          font-weight: 500;
+        }
+        
+        .fa-arrow-down {
+          color: var(--success);
+          transform: rotate(45deg);
+        }
+        
+        .fa-arrow-up {
+          color: var(--danger);
+          transform: rotate(45deg);
+        }
+        
+        .flux-details {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        
+        .count {
+          font-size: 0.9em;
+          color: var(--secondary);
+        }
+        
+        .amount {
+          font-weight: 600;
+          font-size: 1.1em;
+        }
+        
+        .positive .amount {
+          color: var(--success);
+        }
+        
+        .negative .amount {
+          color: var(--danger);
+        }
+        
+        .total-flux {
+          margin-top: 1rem;
+          padding-top: 1rem;
+          border-top: 1px solid #eee;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        
+        .total-flux .label {
+          color: var(--secondary);
+        }
+        
+        .total-flux .value {
+          font-weight: 600;
+          color: var(--primary);
+        }
+        
+        .has-both {
+          border-left: 4px solid var(--primary);
+        }
+        
+        .operations-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+          gap: 2rem;
+        }
+        
+        .operations-list h4 {
+          color: var(--primary);
+          margin-bottom: 1rem;
+        }
+        
+        .operations-list ol {
+          padding-left: 1.5rem;
+        }
+        
+        .operations-list li {
+          margin-bottom: 0.75rem;
+          color: var(--primary);
+        }
+        
+        .operations-list li span {
+          font-weight: 600;
+        }
+        
+        .operations-list .positive {
+          color: var(--success);
+        }
+        
+        .operations-list .negative {
+          color: var(--danger);
+        }
+        
+        .synthesis-paragraph {
+          background: white;
+          padding: 1.5rem;
+          border-radius: 12px;
+          margin-bottom: 1.5rem;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+          line-height: 1.8;
+        }
+        
+        .top-entities {
+          margin-top: 1rem;
+        }
+        
+        .top-entity {
+          display: flex;
+          justify-content: space-between;
+          padding: 0.75rem 1rem;
+          border-radius: 6px;
+          background: #f8f9fa;
+          margin: 0.5rem 0;
+          transition: all 0.2s ease;
+        }
+        
+        .top-entity:hover {
+          background: #e9ecef;
+          transform: translateX(5px);
+        }
+        
+        .top-entity-name {
+          font-weight: 500;
+          color: var(--primary);
+        }
+        
+        .top-entity-value {
+          color: var(--secondary);
+          font-weight: 600;
+        }
+        
+        .highlighted {
+          color: var(--primary);
+          font-weight: 600;
+        }
+        
+        .conclusion-highlight {
+          background: rgba(0, 123, 255, 0.1);
+          padding: 1.5rem;
+          border-radius: 8px;
+          border-left: 4px solid var(--secondary);
+          margin: 1.5rem 0;
+        }
+        
+        .btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--primary);
+          color: white;
+          padding: 1rem 1.8rem;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          font-size: 1rem;
+          text-decoration: none;
+          transition: all 0.3s;
+          font-weight: 600;
+          box-shadow: 0 4px 12px rgba(0, 123, 255, 0.2);
+          height: 54px;
+          min-width: 200px;
+          box-sizing: border-box;
+        }
+        
+        .btn i {
+          margin-right: 0.75rem;
+        }
+        
+        .btn-analyze {
+          background: var(--success);
+        }
+        
+        .btn:hover {
+          background: #004085;
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+        }
+        
+        .btn-analyze:hover {
+          background: #218838;
+        }
+        
+        .file-section {
+          background: white;
+          padding: 2rem;
+          border-radius: 12px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+          margin-bottom: 2rem;
+          text-align: center;
+        }
+        
+        .file-controls {
+          display: flex;
+          justify-content: center;
+          gap: 1.5rem;
+          margin-top: 1.5rem;
+          flex-wrap: wrap;
+        }
+        
+        .file-name {
+          display: block;
+          margin-top: 1.5rem;
+          font-style: italic;
+          color: var(--primary);
+          font-weight: 500;
+          font-size: 1.1rem;
+        }
+        
+        .arrow-icon {
+          transition: transform 0.3s ease;
+          margin-right: 10px;
+        }
+        
+        .expanded .arrow-icon {
+          transform: rotate(90deg);
+        }
+        
+        /* Styles pour la section Comment ça marche */
+        .how-it-works-section {
+          background: white;
+          border-radius: 12px;
+          padding: 2rem;
+          margin-bottom: 2rem;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+          border: 1px solid #e9ecef;
+        }
+        
+        .workflow-step {
+          display: flex;
+          margin-bottom: 2rem;
+          align-items: flex-start;
+        }
+        
+        .step-number {
+          background: var(--primary);
+          color: white;
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: bold;
+          font-size: 1.2rem;
+          flex-shrink: 0;
+          margin-right: 1.5rem;
+        }
+        
+        .step-content {
+          flex: 1;
+        }
+        
+        .typology-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          gap: 1.5rem;
+          margin-top: 1.5rem;
+        }
+        
+        .typology-card {
+          background: #f8f9fa;
+          border-radius: 8px;
+          padding: 1.2rem;
+          border-left: 4px solid var(--primary);
+        }
+        
+        .exclusion-list {
+          columns: 2;
+          column-gap: 2rem;
+        }
+        
+        /* Styles pour la section de filtre */
+        .filter-section {
+          background: white;
+          padding: 2rem;
+          border-radius: 12px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+          margin-bottom: 2rem;
+        }
+        
+        .filter-controls {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          gap: 1.5rem;
+          margin-bottom: 2rem;
+        }
+        
+        .filter-control-group {
+          display: flex;
+          flex-direction: column;
+        }
+        
+        .filter-control-group label {
+          margin-bottom: 0.5rem;
+          font-weight: 500;
+          color: var(--primary);
+        }
+        
+        .filter-control-group input,
+        .filter-control-group select {
+          padding: 0.8rem;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          font-size: 1rem;
+          transition: border-color 0.3s;
+        }
+        
+        .filter-control-group input:focus,
+        .filter-control-group select:focus {
+          outline: none;
+          border-color: var(--primary);
+          box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.1);
+        }
+        
+        .filter-results {
+          margin-top: 2rem;
+          overflow-x: auto;
+        }
+        
+        .filter-results table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 0.9rem;
+        }
+        
+        .filter-results th {
+          background-color: var(--primary);
+          color: white;
+          padding: 1rem;
+          text-align: left;
+        }
+        
+        .filter-results td {
+          padding: 0.8rem 1rem;
+          border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .filter-results tr:nth-child(even) {
+          background-color: #f8f9fa;
+        }
+        
+        .filter-results tr:hover {
+          background-color: #e9ecef;
+        }
+        
+        .no-results {
+          text-align: center;
+          padding: 2rem;
+          font-style: italic;
+          color: #666;
+        }
+        
+        .filter-btn {
+          background-color: var(--primary);
+          color: white;
+          border: none;
+          padding: 0.8rem 1.5rem;
+          border-radius: 8px;
+          font-size: 1rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: background-color 0.3s;
+        }
+        
+        .filter-btn:hover {
+          background-color: #004085;
+        }
+        
+        .filter-btn-container {
+          display: flex;
+          gap: 1rem;
+          justify-content: center;
+          margin-top: 1.5rem;
+        }
+        
+        .reset-btn {
+          background-color: #6c757d;
+          color: white;
+        }
+        
+        .reset-btn:hover {
+          background-color: #5a6268;
+        }
+        
+        @media (max-width: 768px) {
+          .exclusion-list {
+            columns: 1;
+          }
+          .tabs {
+            flex-direction: column;
+          }
+          .tab-button {
+            width: 100%;
+          }
+          .sous-typologie-row {
+            grid-template-columns: 30px 1fr 1fr;
+            grid-template-rows: auto auto;
+          }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>Analyse Flux Financier</h1>
+        <p>Analyse Transactionnelle - Rapport AML</p>
+        <p class="author-signature">Construit par Imed CHEKHAB, Compliance Officer</p>
+        <p class="version-info">Version libre de droit</p>
+    </div>
+
+    <div class="container">
+        <button class="export-btn" onclick="exportConclusionToWord()">
+            <i class="fas fa-file-word"></i> Exporter DOC
+        </button>
+
+        <!-- Section Téléchargement -->
+        <div class="file-section">
+            <h1>Télécharger fichier à traiter</h1>
+            <p>Sélectionnez un fichier Excel pour lancer l'analyse transactionnelle</p>
+            <div class="file-controls">
+                <label class="btn file-select-btn" for="input-excel">
+                    <i class="fas fa-upload"></i> Choisir un fichier
+                </label>
+                <button class="btn btn-analyze" id="analyze-btn">
+                    <i class="fas fa-chart-bar"></i> Analyser
+                </button>
+            </div>
+            <input accept=".xlsx, .xls" id="input-excel" type="file"/>
+            <span class="file-name" id="file-name">Données d'exemple chargées</span>
+            <div class="error-message" id="error-message"></div>
+        </div>
+
+        <div class="loading-overlay" id="loading">
+            <div class="spinner"></div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-button active" onclick="showTab('how-it-works')">
+                <i class="fas fa-info-circle"></i> Comment ça marche
+            </button>
+            <button class="tab-button" onclick="showTab('entrant')">
+                <i class="fas fa-download"></i> Flux Entrant
+            </button>
+            <button class="tab-button" onclick="showTab('sortant')">
+                <i class="fas fa-upload"></i> Flux Sortant
+            </button>
+            <button class="tab-button" onclick="showTab('rapport')">
+                <i class="fas fa-chart-pie"></i> Rapport Synthèse
+            </button>
+            <button class="tab-button" onclick="showTab('conclusion')">
+                <i class="fas fa-file-alt"></i> Conclusion
+            </button>
+            <button class="tab-button" onclick="showTab('filtre')">
+                <i class="fas fa-filter"></i> Filtre
+            </button>
+        </div>
+
+        <!-- Section Comment ça marche -->
+        <div class="tab-content active" id="how-it-works">
+            <div class="how-it-works-section">
+                <h2 style="color: var(--primary); margin-bottom: 1.5rem; text-align: center;">Processus d'Analyse AML</h2>
+                <div class="workflow-step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Import des données</h3>
+                        <p><strong>L'outil traite les fichiers Excel contenant les flux bancaires au format standard.</strong></p>
+                        <p>Seuls les fichiers avec les onglets <strong>"Grand livre"</strong>, <strong>"FE"</strong> (Flux Entrants) et <strong>"FS"</strong> (Flux Sortants) sont acceptés.</p>
+                        <div class="example-section" style="background-color: #f8f9fa; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                            <h4 style="color: var(--primary);">💡 Données d'exemple chargées</h4>
+                            <p>Pour vous permettre de tester l'outil immédiatement, un jeu de données d'exemple est automatiquement chargé au démarrage. Vous pouvez voir les résultats dans tous les onglets :</p>
+                            <ul>
+                                <li><strong>Flux Entrant</strong> : Virements et prélèvements entrants</li>
+                                <li><strong>Flux Sortant</strong> : Virements et prélèvements sortants</li>
+                                <li><strong>Rapport Synthèse</strong> : Analyses globales et statistiques</li>
+                                <li><strong>Conclusion</strong> : Analyse AML et recommandations</li>
+                                <li><strong>Filtre</strong> : Outils de recherche et filtrage avancé</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="workflow-step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>Traitement des transactions</h3>
+                        <p>Chaque opération bancaire est analysée selon ces étapes :</p>
+                        <ul>
+                            <li>Filtrage des opérations exclues (frais, rejets, TVA, etc.)</li>
+                            <li>Classification par typologie opérationnelle</li>
+                            <li>Regroupement par destinataire/émetteur</li>
+                            <li>Calcul des agrégats mensuels</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="workflow-step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>Détection des typologies</h3>
+                        <p>Le système identifie automatiquement 18 typologies transactionnelles clés pour l'analyse AML :</p>
+                        <div class="typology-grid">
+                            <div class="typology-card">
+                                <h4>Virements entrants</h4>
+                                <p>VIR SEPA, VIR INST, VIR URGENT</p>
+                            </div>
+                            <div class="typology-card">
+                                <h4>Virements sortants</h4>
+                                <p>VIR SEPA, VIR INST, VIR URGENT</p>
+                            </div>
+                            <div class="typology-card">
+                                <h4>Prélèvements</h4>
+                                <p>PRLV SEPA, PRLV SDD</p>
+                            </div>
+                            <div class="typology-card">
+                                <h4>Opérations cartes</h4>
+                                <p>Paiements, Retraits, Remboursements</p>
+                            </div>
+                            <div class="typology-card">
+                                <h4>Chèques</h4>
+                                <p>Émission, Remise, Compensation</p>
+                            </div>
+                            <div class="typology-card">
+                                <h4>Espèces</h4>
+                                <p>Dépôts, Retraits</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="workflow-step">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h3>Exclusions appliquées</h3>
+                        <p>Les opérations interens sont exclues.</p>
+                    </div>
+                </div>
+
+                <div class="workflow-step">
+                    <div class="step-number">5</div>
+                    <div class="step-content">
+                        <h3>Filtrage des données</h3>
+                        <p>Utilisez les filtres disponibles pour affiner votre analyse et rechercher des transactions spécifiques par :</p>
+                        <ul>
+                            <li>Mots-clés dans la désignation</li>
+                            <li>Montant de la transaction</li>
+                            <li>Période de temps (dates)</li>
+                            <li>Typologie d'opération</li>
+                            <li>Numéro d'opération</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="workflow-step">
+                    <div class="step-number">6</div>
+                    <div class="step-content">
+                        <h3>Analyse AML avancée</h3>
+                        <p>Le moteur d'analyse détecte automatiquement les comportements à risque :</p>
+                        <ul>
+                            <li>Flux croisés entrants/sortants</li>
+                            <li>Concentration sur peu de contreparties</li>
+                            <li>Transactions inhabituellement élevées</li>
+                            <li>Schémas de structuration</li>
+                            <li>Déséquilibres flux entrants/sortants</li>
+                            <li>Opérations espèces importantes</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="workflow-step">
+                    <div class="step-number">7</div>
+                    <div class="step-content">
+                        <h3>Génération du rapport</h3>
+                        <p>L'outil produit un rapport structuré avec 5 vues analytiques complémentaires :</p>
+                        <ol>
+                            <li>Flux entrants détaillés</li>
+                            <li>Flux sortants détaillés</li>
+                            <li>Synthèse globale</li>
+                            <li>Analyse par typologie</li>
+                            <li>Conclusion AML</li>
+                        </ol>
+                        <p>Le rapport final est exportable au format Word pour intégration au dossier client.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Flux Entrant -->
+        <div class="tab-content" id="entrant">
+            <div id="flux-entrant"></div>
+        </div>
+
+        <!-- Flux Sortant -->
+        <div class="tab-content" id="sortant">
+            <div id="flux-sortant"></div>
+        </div>
+
+        <!-- Rapport Synthèse -->
+        <div class="tab-content" id="rapport">
+            <section class="rapport-section">
+                <details open>
+                    <summary><i class="fas fa-chevron-right arrow-icon"></i> 📊 Synthèse des Flux</summary>
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div>
+                                <h4>Total Crédits</h4>
+                                <p id="total-credit"></p>
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <div>
+                                <h4>Total Débits</h4>
+                                <p id="total-debit"></p>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+                <details>
+                    <summary><i class="fas fa-chevron-right arrow-icon"></i> 🏦 Top 10 des Opérations</summary>
+                    <div class="operations-grid">
+                        <div class="operations-list">
+                            <h4>Top Crédits</h4>
+                            <ol id="top-credits"></ol>
+                        </div>
+                        <div class="operations-list">
+                            <h4>Top Débits</h4>
+                            <ol id="top-debits"></ol>
+                        </div>
+                    </div>
+                </details>
+            </section>
+            <section class="rapport-section">
+                <details>
+                    <summary><i class="fas fa-chevron-right arrow-icon"></i> 🔄 Flux croisés (entrant &amp; sortant)</summary>
+                    <div id="flux-croises"></div>
+                </details>
+            </section>
+            <section class="rapport-section">
+                <details>
+                    <summary><i class="fas fa-chevron-right arrow-icon"></i> 📬 Synthèse par Destinataire</summary>
+                    <div class="destinataire-grid" id="rapport-synthese"></div>
+                </details>
+            </section>
+            <section class="rapport-section">
+                <details>
+                    <summary><i class="fas fa-chevron-right arrow-icon"></i> 📊 Synthèse par Type d'Opération</summary>
+                    <div class="typologie-grid" id="type-operations"></div>
+                </details>
+            </section>
+        </div>
+
+        <!-- Conclusion -->
+        <div class="tab-content" id="conclusion">
+            <div class="conclusion-box" id="conclusion-content">
+                <details open>
+                    <summary><i class="fas fa-chevron-right arrow-icon"></i> 📋 Vue d'ensemble</summary>
+                    <div class="conclusion-section">
+                        <div class="compliance-analysis" id="compliance-text"></div>
+                    </div>
+                </details>
+                <details>
+                    <summary><i class="fas fa-chevron-right arrow-icon"></i> 📥 Flux entrants</summary>
+                    <div class="synthesis-paragraph" id="flux-entrant-details"></div>
+                    <div class="top-entities" id="top-entrants"></div>
+                </details>
+                <details>
+                    <summary><i class="fas fa-chevron-right arrow-icon"></i> 📤 Flux sortants</summary>
+                    <div class="synthesis-paragraph" id="flux-sortant-details"></div>
+                    <div class="top-entities" id="top-sortants"></div>
+                </details>
+                <details>
+                    <summary><i class="fas fa-chevron-right arrow-icon"></i> 🚨 Typologies suspectes</summary>
+                    <div class="alert-section" id="aml-alerts"></div>
+                </details>
+                <details>
+                    <summary><i class="fas fa-chevron-right arrow-icon"></i> 📑 Conclusion</summary>
+                    <div class="conclusion-highlight">
+                        <p id="synthese-finale"></p>
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <!-- Onglet Filtre -->
+        <div class="tab-content" id="filtre">
+            <div class="filter-section">
+                <h2><i class="fas fa-filter"></i> Filtrer les flux</h2>
+                <p>Appliquez des filtres pour affiner les données dans les onglets Flux Entrant et Flux Sortant</p>
+
+                <div class="filter-controls">
+                    <div class="filter-control-group">
+                        <label for="filter-flux-type"><i class="fas fa-exchange-alt"></i> Type de flux</label>
+                        <select id="filter-flux-type">
+                            <option value="tous">Tous</option>
+                            <option value="entrants">Entrants</option>
+                            <option value="sortants">Sortants</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-control-group">
+                        <label for="filter-keyword"><i class="fas fa-key"></i> Mot-clé</label>
+                        <input type="text" id="filter-keyword" placeholder="Rechercher dans tous les champs">
+                    </div>
+
+                    <div class="filter-control-group">
+                        <label for="filter-typologie"><i class="fas fa-tag"></i> Typologie</label>
+                        <input type="text" id="filter-typologie" placeholder="Ex: VIR, PRLV...">
+                    </div>
+
+                    <div class="filter-control-group">
+                        <label for="filter-libelle"><i class="fas fa-font"></i> Libellé</label>
+                        <input type="text" id="filter-libelle" placeholder="Partie du libellé">
+                    </div>
+
+                    <div class="filter-control-group">
+                        <label for="filter-operation"><i class="fas fa-hashtag"></i> N° d'opération</label>
+                        <input type="text" id="filter-operation" placeholder="Ex: 123456">
+                    </div>
+
+                    <div class="filter-control-group">
+                        <label for="filter-start-date"><i class="fas fa-calendar-alt"></i> Date début</label>
+                        <input type="date" id="filter-start-date">
+                    </div>
+
+                    <div class="filter-control-group">
+                        <label for="filter-end-date"><i class="fas fa-calendar-alt"></i> Date fin</label>
+                        <input type="date" id="filter-end-date">
+                    </div>
+
+                    <div class="filter-control-group">
+                        <label for="filter-min-amount"><i class="fas fa-euro-sign"></i> Montant min (€)</label>
+                        <input type="number" id="filter-min-amount" placeholder="Ex: 5000" min="0">
+                    </div>
+
+                    <div class="filter-control-group">
+                        <label for="filter-max-amount"><i class="fas fa-euro-sign"></i> Montant max (€)</label>
+                        <input type="number" id="filter-max-amount" placeholder="Ex: 10000" min="0">
+                    </div>
+                </div>
+
+                <div class="filter-btn-container">
+                    <button class="filter-btn" onclick="applyFilters()">
+                        <i class="fas fa-filter"></i> Appliquer les filtres
+                    </button>
+                    <button class="filter-btn reset-btn" onclick="resetFilters()">
+                        <i class="fas fa-redo"></i> Réinitialiser
+                    </button>
+                </div>
+
+                <div class="filter-results" id="filter-results">
+                    <div class="no-results">
+                        <i class="fas fa-filter" style="font-size: 3rem; color: #ccc; margin-bottom: 1rem;"></i>
+                        <p>Aucun filtre appliqué. Configurez vos critères et cliquez sur "Appliquer les filtres".</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Liste étendue des exclusions
+        const EXCLUSIONS = [
+          'REJET', 'RESTITUTION', 'MAINLEVEE', 'TVA', 'COMMISSION', 'FRAIS',
+          'TCION', 'T CION', 'T-CION', 'T.CION', 'T CION', 'T/CION', 'T: CION',
+          'TION', 'T-CION', 'T CION', 'T-CIONS', 'T CIONS', 'T.CIONS', 'T/CIONS',
+          'COMMISSIONS', 'FRAIS BANCAIRE', 'FRAIS BANCAIRES', 'FRAIS DE GESTION',
+          'FRAIS TENUE COMPTE', 'FRAIS COMPTE', 'AGIOS', 'COMMISSION INTERVENTION',
+          'COMMISSION OP', 'FRAIS OP', 'COUT OPERATION', 'TVA FRAIS', 'TVA COMMISSION',
+          'Tva', 'Intérêts', 'TFrais', 'Retenue', 'TVA/CION', 'ARRETE', 'ABONNEMENT',
+          'CION', 'SANS', 'AVOIR', 'COTIS', 'CIONS', 'AJUSTEMENT', 'FEE', 'FEES',
+          'BANK FEE', 'SERVICE FEE', 'TRANSACTION FEE', 'CHARGE', 'CHARGES',
+          'OPERATION FEE', 'COTISATION', 'COTISATIONS', 'TAXE', 'TAXES', 'PRELEVEMENT',
+          'PRELEVEMENTS', 'RETENUE SOURCE', 'RETENUE A LA SOURCE', 'DEBIT FEE',
+          'CREDIT FEE', 'BANK CHARGE', 'BANK CHARGES', 'OPERATION CHARGE',
+          'COMMISSION BANCAIRE', 'FRAIS FINANCIER', 'FRAIS FINANCIERS',
+          'FRAIS ADMINISTRATIF', 'FRAIS ADMINISTRATIFS', 'FRAIS DOSSIE',
+          'FRAIS DOSSIER', 'FRAIS CLIENTELE', 'FRAIS CLIENTÈLE', 'INTERENS'
+        ];
+
+        const SUFFIXES_JURIDIQUES = ['SAS', 'SARL', 'SA', 'EURL', 'EI', 'GIE', 'SNC', 'SCP', 'SASU'];
+        const formatter = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2 });
+
+        // Variables globales pour les données
+        let originalAnalysisData = null;
+        let filteredAnalysisData = { credits: {}, debits: {} };
+        let fluxEntrants = [];
+        let fluxSortants = [];
+
+        // Fonction pour charger des données d'exemple complètes avec toutes les typologies
+        function loadExampleData() {
+            console.log("Chargement des données d'exemple complètes...");
+            
+            // Créer un jeu de données d'exemple complet avec toutes les typologies
+            originalAnalysisData = {
+                credits: {
+                    // VIR SEPA - Flux croisés
+                    'VIR SEPA': {
+                        total: 18500,
+                        count: 7,
+                        destinataires: {
+                            'Entreprise ABC': {
+                                total: 5000,
+                                count: 2,
+                                monthlyFrequency: new Set(['2023-01', '2023-02']),
+                                operations: [
+                                    {
+                                        date: '15/01/2023',
+                                        numero: 'OP123456',
+                                        libelle: 'VIR SEPA ENTREPRISE ABC SALAIRE',
+                                        montant: 2500,
+                                        IBAN_DO: 'FR7630001007941234567890185',
+                                        Motif: 'Salaire janvier 2023',
+                                        Adresse1_DO: '12 Rue de Commerce',
+                                        Adresse2_DO: '75001 PARIS'
+                                    },
+                                    {
+                                        date: '15/02/2023',
+                                        numero: 'OP123457',
+                                        libelle: 'VIR SEPA ENTREPRISE ABC REMBOURSEMENT',
+                                        montant: 2500,
+                                        IBAN_DO: 'FR7630001007941234567890185',
+                                        Motif: 'Remboursement frais',
+                                        Adresse1_DO: '12 Rue de Commerce',
+                                        Adresse2_DO: '75001 PARIS'
+                                    }
+                                ]
+                            },
+                            'Société XYZ': {
+                                total: 7500,
+                                count: 3,
+                                monthlyFrequency: new Set(['2023-01', '2023-02', '2023-03']),
+                                operations: [
+                                    {
+                                        date: '10/01/2023',
+                                        numero: 'OP123458',
+                                        libelle: 'VIR SEPA SOCIETE XYZ SUBVENTION',
+                                        montant: 2500,
+                                        IBAN_DO: 'FR7630001007949876543210987',
+                                        Motif: 'Subvention projet',
+                                        Adresse1_DO: '45 Avenue des Champs',
+                                        Adresse2_DO: '69002 LYON'
+                                    },
+                                    {
+                                        date: '10/02/2023',
+                                        numero: 'OP123459',
+                                        libelle: 'VIR SEPA SOCIETE XYZ SUBVENTION',
+                                        montant: 2500,
+                                        IBAN_DO: 'FR7630001007949876543210987',
+                                        Motif: 'Subvention projet',
+                                        Adresse1_DO: '45 Avenue des Champs',
+                                        Adresse2_DO: '69002 LYON'
+                                    },
+                                    {
+                                        date: '10/03/2023',
+                                        numero: 'OP123460',
+                                        libelle: 'VIR SEPA SOCIETE XYZ SUBVENTION',
+                                        montant: 2500,
+                                        IBAN_DO: 'FR7630001007949876543210987',
+                                        Motif: 'Subvention projet',
+                                        Adresse1_DO: '45 Avenue des Champs',
+                                        Adresse2_DO: '69002 LYON'
+                                    }
+                                ]
+                            },
+                            'STARTUP INNOV': {
+                                total: 6000,
+                                count: 2,
+                                monthlyFrequency: new Set(['2023-02', '2023-03']),
+                                operations: [
+                                    {
+                                        date: '20/02/2023',
+                                        numero: 'OP123471',
+                                        libelle: 'VIR SEPA STARTUP INNOV INVESTISSEMENT',
+                                        montant: 3000,
+                                        IBAN_DO: 'FR7630001007941111111111111',
+                                        Motif: 'Investissement capital',
+                                        Adresse1_DO: '78 Rue Innovation',
+                                        Adresse2_DO: '13001 MARSEILLE'
+                                    },
+                                    {
+                                        date: '20/03/2023',
+                                        numero: 'OP123472',
+                                        libelle: 'VIR SEPA STARTUP INNOV INVESTISSEMENT',
+                                        montant: 3000,
+                                        IBAN_DO: 'FR7630001007941111111111111',
+                                        Motif: 'Investissement capital',
+                                        Adresse1_DO: '78 Rue Innovation',
+                                        Adresse2_DO: '13001 MARSEILLE'
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    // VIR NON - Flux croisés
+                    'VIR NON': {
+                        total: 12000,
+                        count: 3,
+                        destinataires: {
+                            'COMPANY UK LTD': {
+                                total: 5000,
+                                count: 1,
+                                monthlyFrequency: new Set(['2023-02']),
+                                operations: [
+                                    {
+                                        date: '15/02/2023',
+                                        numero: 'OP123473',
+                                        libelle: 'VIR NON COMPANY UK LTD INTERNATIONAL',
+                                        montant: 5000,
+                                        IBAN_DO: 'GB29NWBK60161331926819',
+                                        Motif: 'Virement international',
+                                        Adresse1_DO: '25 London Street',
+                                        Adresse2_DO: 'LONDON UK'
+                                    }
+                                ]
+                            },
+                            'FIRMA DEUTSCHLAND GMBH': {
+                                total: 7000,
+                                count: 2,
+                                monthlyFrequency: new Set(['2023-01', '2023-03']),
+                                operations: [
+                                    {
+                                        date: '10/01/2023',
+                                        numero: 'OP123474',
+                                        libelle: 'VIR NON FIRMA DEUTSCHLAND TRANSFERT',
+                                        montant: 3500,
+                                        IBAN_DO: 'DE89370400440532013000',
+                                        Motif: 'Transfert devises',
+                                        Adresse1_DO: '45 Berliner Strasse',
+                                        Adresse2_DO: 'BERLIN GERMANY'
+                                    },
+                                    {
+                                        date: '10/03/2023',
+                                        numero: 'OP123475',
+                                        libelle: 'VIR NON FIRMA DEUTSCHLAND TRANSFERT',
+                                        montant: 3500,
+                                        IBAN_DO: 'DE89370400440532013000',
+                                        Motif: 'Transfert devises',
+                                        Adresse1_DO: '45 Berliner Strasse',
+                                        Adresse2_DO: 'BERLIN GERMANY'
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    // VIR IP - Flux croisés
+                    'VIR IP': {
+                        total: 4500,
+                        count: 2,
+                        destinataires: {
+                            'FREELANCE TECH': {
+                                total: 4500,
+                                count: 2,
+                                monthlyFrequency: new Set(['2023-02', '2023-03']),
+                                operations: [
+                                    {
+                                        date: '25/02/2023',
+                                        numero: 'OP123476',
+                                        libelle: 'VIR IP FREELANCE TECH URGENT',
+                                        montant: 2000,
+                                        IBAN_DO: 'FR7630001007942222222222222',
+                                        Motif: 'Paiement urgent',
+                                        Adresse1_DO: '12 Rue Digital',
+                                        Adresse2_DO: '69003 LYON'
+                                    },
+                                    {
+                                        date: '25/03/2023',
+                                        numero: 'OP123477',
+                                        libelle: 'VIR IP FREELANCE TECH ACOMPTE',
+                                        montant: 2500,
+                                        IBAN_DO: 'FR7630001007942222222222222',
+                                        Motif: 'Acompte projet',
+                                        Adresse1_DO: '12 Rue Digital',
+                                        Adresse2_DO: '69003 LYON'
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    // P INST - Flux croisés
+                    'P INST': {
+                        total: 800,
+                        count: 2,
+                        destinataires: {
+                            'CAFE CENTRAL': {
+                                total: 800,
+                                count: 2,
+                                monthlyFrequency: new Set(['2023-01', '2023-02']),
+                                operations: [
+                                    {
+                                        date: '05/01/2023',
+                                        numero: 'OP123478',
+                                        libelle: 'P INST CAFE CENTRAL QR CODE',
+                                        montant: 400,
+                                        IBAN_DO: 'FR7630001007943333333333333',
+                                        Motif: 'Paiement mobile',
+                                        Adresse1_DO: '8 Place Centrale',
+                                        Adresse2_DO: '75002 PARIS'
+                                    },
+                                    {
+                                        date: '05/02/2023',
+                                        numero: 'OP123479',
+                                        libelle: 'P INST CAFE CENTRAL MOBILE',
+                                        montant: 400,
+                                        IBAN_DO: 'FR7630001007943333333333333',
+                                        Motif: 'Paiement mobile',
+                                        Adresse1_DO: '8 Place Centrale',
+                                        Adresse2_DO: '75002 PARIS'
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    // CHQ - Flux croisés
+                    'CHQ': {
+                        total: 3200,
+                        count: 3,
+                        destinataires: {
+                            'ASSOCIATION SPORT': {
+                                total: 1200,
+                                count: 1,
+                                monthlyFrequency: new Set(['2023-01']),
+                                operations: [
+                                    {
+                                        date: '18/01/2023',
+                                        numero: 'OP123480',
+                                        libelle: 'CHQ ASSOCIATION SPORT REMBOURSEMENT',
+                                        montant: 1200,
+                                        IBAN_DO: 'FR7630001007944444444444444',
+                                        Motif: 'Remboursement adhésion',
+                                        Adresse1_DO: '15 Rue du Sport',
+                                        Adresse2_DO: '31000 TOULOUSE'
+                                    }
+                                ]
+                            },
+                            'ARTISAN LOCAL': {
+                                total: 2000,
+                                count: 2,
+                                monthlyFrequency: new Set(['2023-02', '2023-03']),
+                                operations: [
+                                    {
+                                        date: '22/02/2023',
+                                        numero: 'OP123481',
+                                        libelle: 'CHQ ARTISAN LOCAL TRAVAUX',
+                                        montant: 1000,
+                                        IBAN_DO: 'FR7630001007945555555555555',
+                                        Motif: 'Paiement travaux',
+                                        Adresse1_DO: '33 Avenue Artisanale',
+                                        Adresse2_DO: '69001 LYON'
+                                    },
+                                    {
+                                        date: '22/03/2023',
+                                        numero: 'OP123482',
+                                        libelle: 'CHQ ARTISAN LOCAL FOURNITURES',
+                                        montant: 1000,
+                                        IBAN_DO: 'FR7630001007945555555555555',
+                                        Motif: 'Paiement fournitures',
+                                        Adresse1_DO: '33 Avenue Artisanale',
+                                        Adresse2_DO: '69001 LYON'
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    // ESP - Flux croisés
+                    'ESP': {
+                        total: 2500,
+                        count: 3,
+                        destinataires: {
+                            'GUICHET BANQUE': {
+                                total: 2500,
+                                count: 3,
+                                monthlyFrequency: new Set(['2023-01', '2023-02', '2023-03']),
+                                operations: [
+                                    {
+                                        date: '28/01/2023',
+                                        numero: 'OP123483',
+                                        libelle: 'ESP GUICHET BANQUE DEPOT',
+                                        montant: 1000,
+                                        IBAN_DO: '',
+                                        Motif: 'Dépôt espèces',
+                                        Adresse1_DO: 'Agence Centrale',
+                                        Adresse2_DO: '75008 PARIS'
+                                    },
+                                    {
+                                        date: '28/02/2023',
+                                        numero: 'OP123484',
+                                        libelle: 'ESP GUICHET BANQUE DEPOT',
+                                        montant: 800,
+                                        IBAN_DO: '',
+                                        Motif: 'Dépôt espèces',
+                                        Adresse1_DO: 'Agence Centrale',
+                                        Adresse2_DO: '75008 PARIS'
+                                    },
+                                    {
+                                        date: '28/03/2023',
+                                        numero: 'OP123485',
+                                        libelle: 'ESP GUICHET BANQUE DEPOT',
+                                        montant: 700,
+                                        IBAN_DO: '',
+                                        Motif: 'Dépôt espèces',
+                                        Adresse1_DO: 'Agence Centrale',
+                                        Adresse2_DO: '75008 PARIS'
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    // DPO - Flux croisés
+                    'DPO': {
+                        total: 1800,
+                        count: 2,
+                        destinataires: {
+                            'ACCUEIL AGENCE': {
+                                total: 1800,
+                                count: 2,
+                                monthlyFrequency: new Set(['2023-01', '2023-02']),
+                                operations: [
+                                    {
+                                        date: '12/01/2023',
+                                        numero: 'OP123486',
+                                        libelle: 'DPO ACCUEIL AGENCE CHEQUE',
+                                        montant: 1000,
+                                        IBAN_DO: '',
+                                        Motif: 'Dépôt chèque',
+                                        Adresse1_DO: 'Agence Principale',
+                                        Adresse2_DO: '75001 PARIS'
+                                    },
+                                    {
+                                        date: '12/02/2023',
+                                        numero: 'OP123487',
+                                        libelle: 'DPO ACCUEIL AGENCE ESPECES',
+                                        montant: 800,
+                                        IBAN_DO: '',
+                                        Motif: 'Versement espèces',
+                                        Adresse1_DO: 'Agence Principale',
+                                        Adresse2_DO: '75001 PARIS'
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    // FAC - Flux croisés
+                    'FAC': {
+                        total: 5600,
+                        count: 4,
+                        destinataires: {
+                            'CLIENT CORPORATE': {
+                                total: 5600,
+                                count: 4,
+                                monthlyFrequency: new Set(['2023-01', '2023-02', '2023-03', '2023-04']),
+                                operations: [
+                                    {
+                                        date: '30/01/2023',
+                                        numero: 'OP123488',
+                                        libelle: 'FAC CLIENT CORPORATE MARS',
+                                        montant: 1400,
+                                        IBAN_DO: 'FR7630001007946666666666666',
+                                        Motif: 'Encaissement facture',
+                                        Adresse1_DO: '89 Avenue Corporate',
+                                        Adresse2_DO: '92000 NANTERRE'
+                                    },
+                                    {
+                                        date: '28/02/2023',
+                                        numero: 'OP123489',
+                                        libelle: 'FAC CLIENT CORPORATE AVRIL',
+                                        montant: 1400,
+                                        IBAN_DO: 'FR7630001007946666666666666',
+                                        Motif: 'Encaissement facture',
+                                        Adresse1_DO: '89 Avenue Corporate',
+                                        Adresse2_DO: '92000 NANTERRE'
+                                    },
+                                    {
+                                        date: '30/03/2023',
+                                        numero: 'OP123490',
+                                        libelle: 'FAC CLIENT CORPORATE MAI',
+                                        montant: 1400,
+                                        IBAN_DO: 'FR7630001007946666666666666',
+                                        Motif: 'Encaissement facture',
+                                        Adresse1_DO: '89 Avenue Corporate',
+                                        Adresse2_DO: '92000 NANTERRE'
+                                    },
+                                    {
+                                        date: '28/04/2023',
+                                        numero: 'OP123491',
+                                        libelle: 'FAC CLIENT CORPORATE JUIN',
+                                        montant: 1400,
+                                        IBAN_DO: 'FR7630001007946666666666666',
+                                        Motif: 'Encaissement facture',
+                                        Adresse1_DO: '89 Avenue Corporate',
+                                        Adresse2_DO: '92000 NANTERRE'
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    // LCR - Flux croisés
+                    'LCR': {
+                        total: 4200,
+                        count: 3,
+                        destinataires: {
+                            'GROUPE INDUSTRIEL': {
+                                total: 4200,
+                                count: 3,
+                                monthlyFrequency: new Set(['2023-01', '2023-02', '2023-03']),
+                                operations: [
+                                    {
+                                        date: '20/01/2023',
+                                        numero: 'OP123492',
+                                        libelle: 'LCR GROUPE INDUSTRIEL ENCAISSEMENT',
+                                        montant: 1400,
+                                        IBAN_DO: 'FR7630001007947777777777777',
+                                        Motif: 'Encaissement LCR',
+                                        Adresse1_DO: '56 Zone Industrielle',
+                                        Adresse2_DO: '69100 VILLEURBANNE'
+                                    },
+                                    {
+                                        date: '20/02/2023',
+                                        numero: 'OP123493',
+                                        libelle: 'LCR GROUPE INDUSTRIEL ENCAISSEMENT',
+                                        montant: 1400,
+                                        IBAN_DO: 'FR7630001007947777777777777',
+                                        Motif: 'Encaissement LCR',
+                                        Adresse1_DO: '56 Zone Industrielle',
+                                        Adresse2_DO: '69100 VILLEURBANNE'
+                                    },
+                                    {
+                                        date: '20/03/2023',
+                                        numero: 'OP123494',
+                                        libelle: 'LCR GROUPE INDUSTRIEL ENCAISSEMENT',
+                                        montant: 1400,
+                                        IBAN_DO: 'FR7630001007947777777777777',
+                                        Motif: 'Encaissement LCR',
+                                        Adresse1_DO: '56 Zone Industrielle',
+                                        Adresse2_DO: '69100 VILLEURBANNE'
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    // PRLV SEPA - Non croisé
+                    'PRLV SEPA': {
+                        total: 3200,
+                        count: 4,
+                        destinataires: {
+                            'FOURNISSEUR ENERGY': {
+                                total: 3200,
+                                count: 4,
+                                monthlyFrequency: new Set(['2023-01', '2023-02', '2023-03', '2023-04']),
+                                operations: [
+                                    {
+                                        date: '05/01/2023',
+                                        numero: 'OP123461',
+                                        libelle: 'PRLV SEPA FOURNISSEUR ENERGY',
+                                        montant: 800,
+                                        IBAN_DO: 'FR7630004000011234567890143',
+                                        Motif: 'Facture électricité',
+                                        Adresse1_DO: '8 Rue de l\'Industrie',
+                                        Adresse2_DO: '31000 TOULOUSE'
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    // PRLV SDD - Non croisé
+                    'PRLV SDD': {
+                        total: 1500,
+                        count: 3,
+                        destinataires: {
+                            'ETAT FISCAL': {
+                                total: 1500,
+                                count: 3,
+                                monthlyFrequency: new Set(['2023-01', '2023-02', '2023-03']),
+                                operations: [
+                                    {
+                                        date: '15/01/2023',
+                                        numero: 'OP123495',
+                                        libelle: 'PRLV SDD ETAT FISCAL TAXES',
+                                        montant: 500,
+                                        IBAN_DO: 'FR7630004000018888888888888',
+                                        Motif: 'Prélèvement fiscal',
+                                        Adresse1_DO: 'Trésor Public',
+                                        Adresse2_DO: '75007 PARIS'
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    // CB - Non croisé
+                    'CB': {
+                        total: 2850,
+                        count: 9,
+                        destinataires: {
+                            'SUPERMARCHE CITY': {
+                                total: 450,
+                                count: 3,
+                                monthlyFrequency: new Set(['2023-01', '2023-02', '2023-03']),
+                                operations: [
+                                    {
+                                        date: '08/01/2023',
+                                        numero: 'OP123496',
+                                        libelle: 'CB SUPERMARCHE CITY COURSES',
+                                        montant: 150,
+                                        IBAN_DO: '',
+                                        Motif: 'Achat commerce',
+                                        Adresse1_DO: 'Centre Commercial',
+                                        Adresse2_DO: '69009 LYON'
+                                    }
+                                ]
+                            },
+                            'AMAZON ONLINE': {
+                                total: 1200,
+                                count: 4,
+                                monthlyFrequency: new Set(['2023-01', '2023-02', '2023-03', '2023-04']),
+                                operations: [
+                                    {
+                                        date: '12/01/2023',
+                                        numero: 'OP123497',
+                                        libelle: 'CB AMAZON ONLINE ACHAT',
+                                        montant: 300,
+                                        IBAN_DO: '',
+                                        Motif: 'Paiement en ligne',
+                                        Adresse1_DO: 'Plateforme e-commerce',
+                                        Adresse2_DO: 'INTERNET'
+                                    }
+                                ]
+                            },
+                            'STATION ESSENCE': {
+                                total: 1200,
+                                count: 2,
+                                monthlyFrequency: new Set(['2023-02', '2023-03']),
+                                operations: [
+                                    {
+                                        date: '18/02/2023',
+                                        numero: 'OP123498',
+                                        libelle: 'CB STATION ESSENCE CARBURANT',
+                                        montant: 600,
+                                        IBAN_DO: '',
+                                        Motif: 'Achat carburant',
+                                        Adresse1_DO: 'Autoroute A6',
+                                        Adresse2_DO: '69000 LYON'
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                },
+                debits: {
+                    // VIR SEPA - Flux croisés
+                    'VIR SEPA': {
+                        total: 14500,
+                        count: 5,
+                        destinataires: {
+                            'Entreprise ABC': {
+                                total: 4000,
+                                count: 2,
+                                monthlyFrequency: new Set(['2023-02', '2023-03']),
+                                operations: [
+                                    {
+                                        date: '20/02/2023',
+                                        numero: 'OP123501',
+                                        libelle: 'VIR SEPA ENTREPRISE ABC FOURNITURE',
+                                        montant: 2000,
+                                        Nom_DT: 'Entreprise ABC',
+                                        IBAN_DT: 'FR7630001007941234567890185',
+                                        Libelle_remise: 'Paiement fournisseur',
+                                        Libelle_operation: 'VIR SEPA'
+                                    },
+                                    {
+                                        date: '20/03/2023',
+                                        numero: 'OP123502',
+                                        libelle: 'VIR SEPA ENTREPRISE ABC SERVICE',
+                                        montant: 2000,
+                                        Nom_DT: 'Entreprise ABC',
+                                        IBAN_DT: 'FR7630001007941234567890185',
+                                        Libelle_remise: 'Paiement service',
+                                        Libelle_operation: 'VIR SEPA'
+                                    }
+                                ]
+                            },
+                            'STARTUP INNOV': {
+                                total: 6000,
+                                count: 2,
+                                monthlyFrequency: new Set(['2023-01', '2023-02']),
+                                operations: [
+                                    {
+                                        date: '15/01/2023',
+                                        numero: 'OP123503',
+                                        libelle: 'VIR SEPA STARTUP INNOV INVEST',
+                                        montant: 3000,
+                                        Nom_DT: 'STARTUP INNOV',
+                                        IBAN_DT: 'FR7630001007941111111111111',
+                                        Libelle_remise: 'Investissement',
+                                        Libelle_operation: 'VIR SEPA'
+                                    },
+                                    {
+                                        date: '15/02/2023',
+                                        numero: 'OP123504',
+                                        libelle: 'VIR SEPA STARTUP INNOV DEVELOPPEMENT',
+                                        montant: 3000,
+                                        Nom_DT: 'STARTUP INNOV',
+                                        IBAN_DT: 'FR7630001007941111111111111',
+                                        Libelle_remise: 'Développement projet',
+                                        Libelle_operation: 'VIR SEPA'
+                                    }
+                                ]
+                            },
+                            'FREELANCE TECH': {
+                                total: 4500,
+                                count: 1,
+                                monthlyFrequency: new Set(['2023-03']),
+                                operations: [
+                                    {
+                                        date: '25/03/2023',
+                                        numero: 'OP123505',
+                                        libelle: 'VIR SEPA FREELANCE TECH PRESTATION',
+                                        montant: 4500,
+                                        Nom_DT: 'FREELANCE TECH',
+                                        IBAN_DT: 'FR7630001007942222222222222',
+                                        Libelle_remise: 'Paiement prestation',
+                                        Libelle_operation: 'VIR SEPA'
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    // VIR NON - Flux croisés
+                    'VIR NON': {
+                        total: 7500,
+                        count: 2,
+                        destinataires: {
+                            'COMPANY UK LTD': {
+                                total: 5000,
+                                count: 1,
+                                monthlyFrequency: new Set(['2023-01']),
+                                operations: [
+                                    {
+                                        date: '10/01/2023',
+                                        numero: 'OP123506',
+                                        libelle: 'VIR NON COMPANY UK LTD IMPORT',
+                                        montant: 5000,
+                                        Nom_DT: 'COMPANY UK LTD',
+                                        IBAN_DT: 'GB29NWBK60161331926819',
+                                        Libelle_remise: 'Paiement import',
+                                        Libelle_operation: 'VIR NON'
+                                    }
+                                ]
+                            },
+                            'FIRMA DEUTSCHLAND GMBH': {
+                                total: 2500,
+                                count: 1,
+                                monthlyFrequency: new Set(['2023-02']),
+                                operations: [
+                                    {
+                                        date: '15/02/2023',
+                                        numero: 'OP123507',
+                                        libelle: 'VIR NON FIRMA DEUTSCHLAND EQUIPEMENT',
+                                        montant: 2500,
+                                        Nom_DT: 'FIRMA DEUTSCHLAND GMBH',
+                                        IBAN_DT: 'DE89370400440532013000',
+                                        Libelle_remise: 'Achat équipement',
+                                        Libelle_operation: 'VIR NON'
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    // VIR IP - Flux croisés
+                    'VIR IP': {
+                        total: 2000,
+                        count: 1,
+                        destinataires: {
+                            'FREELANCE TECH': {
+                                total: 2000,
+                                count: 1,
+                                monthlyFrequency: new Set(['2023-01']),
+                                operations: [
+                                    {
+                                        date: '05/01/2023',
+                                        numero: 'OP123508',
+                                        libelle: 'VIR IP FREELANCE TECH URGENT',
+                                        montant: 2000,
+                                        Nom_DT: 'FREELANCE TECH',
+                                        IBAN_DT: 'FR7630001007942222222222222',
+                                        Libelle_remise: 'Paiement urgent',
+                                        Libelle_operation: 'VIR IP'
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    // P INST - Flux croisés
+                    'P INST': {
+                        total: 400,
+                        count: 1,
+                        destinataires: {
+                            'CAFE CENTRAL': {
+                                total: 400,
+                                count: 1,
+                                monthlyFrequency: new Set(['2023-03']),
+                                operations: [
+                                    {
+                                        date: '15/03/2023',
+                                        numero: 'OP123509',
+                                        libelle: 'P INST CAFE CENTRAL REPAS',
+                                        montant: 400,
+                                        Nom_DT: 'CAFE CENTRAL',
+                                        IBAN_DT: 'FR7630001007943333333333333',
+                                        Libelle_remise: 'Paiement repas',
+                                        Libelle_operation: 'P INST'
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    // CHQ - Flux croisés
+                    'CHQ': {
+                        total: 1800,
+                        count: 2,
+                        destinataires: {
+                            'ARTISAN LOCAL': {
+                                total: 1800,
+                                count: 2,
+                                monthlyFrequency: new Set(['2023-01', '2023-02']),
+                                operations: [
+                                    {
+                                        date: '10/01/2023',
+                                        numero: 'OP123510',
+                                        libelle: 'CHQ ARTISAN LOCAL RENOVATION',
+                                        montant: 900,
+                                        Nom_DT: 'ARTISAN LOCAL',
+                                        IBAN_DT: 'FR7630001007945555555555555',
+                                        Libelle_remise: 'Paiement rénovation',
+                                        Libelle_operation: 'CHQ'
+                                    },
+                                    {
+                                        date: '10/02/2023',
+                                        numero: 'OP123511',
+                                        libelle: 'CHQ ARTISAN LOCAL REPARATION',
+                                        montant: 900,
+                                        Nom_DT: 'ARTISAN LOCAL',
+                                        IBAN_DT: 'FR7630001007945555555555555',
+                                        Libelle_remise: 'Paiement réparation',
+                                        Libelle_operation: 'CHQ'
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    // ESP - Flux croisés
+                    'ESP': {
+                        total: 1200,
+                        count: 2,
+                        destinataires: {
+                            'GUICHET BANQUE': {
+                                total: 1200,
+                                count: 2,
+                                monthlyFrequency: new Set(['2023-02', '2023-03']),
+                                operations: [
+                                    {
+                                        date: '15/02/2023',
+                                        numero: 'OP123512',
+                                        libelle: 'ESP GUICHET BANQUE RETRAIT',
+                                        montant: 600,
+                                        Nom_DT: 'GUICHET BANQUE',
+                                        IBAN_DT: '',
+                                        Libelle_remise: 'Retrait espèces',
+                                        Libelle_operation: 'ESP'
+                                    },
+                                    {
+                                        date: '15/03/2023',
+                                        numero: 'OP123513',
+                                        libelle: 'ESP GUICHET BANQUE RETRAIT',
+                                        montant: 600,
+                                        Nom_DT: 'GUICHET BANQUE',
+                                        IBAN_DT: '',
+                                        Libelle_remise: 'Retrait espèces',
+                                        Libelle_operation: 'ESP'
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    // DPO - Flux croisés
+                    'DPO': {
+                        total: 1000,
+                        count: 1,
+                        destinataires: {
+                            'ACCUEIL AGENCE': {
+                                total: 1000,
+                                count: 1,
+                                monthlyFrequency: new Set(['2023-03']),
+                                operations: [
+                                    {
+                                        date: '20/03/2023',
+                                        numero: 'OP123514',
+                                        libelle: 'DPO ACCUEIL AGENCE CHEQUE',
+                                        montant: 1000,
+                                        Nom_DT: 'ACCUEIL AGENCE',
+                                        IBAN_DT: '',
+                                        Libelle_remise: 'Dépôt chèque',
+                                        Libelle_operation: 'DPO'
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    // FAC - Flux croisés
+                    'FAC': {
+                        total: 4200,
+                        count: 3,
+                        destinataires: {
+                            'FOURNISSEUR OFFICE': {
+                                total: 4200,
+                                count: 3,
+                                monthlyFrequency: new Set(['2023-01', '2023-02', '2023-03']),
+                                operations: [
+                                    {
+                                        date: '10/01/2023',
+                                        numero: 'OP123515',
+                                        libelle: 'FAC FOURNISSEUR OFFICE MATERIEL',
+                                        montant: 1400,
+                                        Nom_DT: 'FOURNISSEUR OFFICE',
+                                        IBAN_DT: 'FR7630001007949999999999999',
+                                        Libelle_remise: 'Paiement facture',
+                                        Libelle_operation: 'FAC'
+                                    },
+                                    {
+                                        date: '10/02/2023',
+                                        numero: 'OP123516',
+                                        libelle: 'FAC FOURNISSEUR OFFICE MATERIEL',
+                                        montant: 1400,
+                                        Nom_DT: 'FOURNISSEUR OFFICE',
+                                        IBAN_DT: 'FR7630001007949999999999999',
+                                        Libelle_remise: 'Paiement facture',
+                                        Libelle_operation: 'FAC'
+                                    },
+                                    {
+                                        date: '10/03/2023',
+                                        numero: 'OP123517',
+                                        libelle: 'FAC FOURNISSEUR OFFICE MATERIEL',
+                                        montant: 1400,
+                                        Nom_DT: 'FOURNISSEUR OFFICE',
+                                        IBAN_DT: 'FR7630001007949999999999999',
+                                        Libelle_remise: 'Paiement facture',
+                                        Libelle_operation: 'FAC'
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    // LCR - Flux croisés
+                    'LCR': {
+                        total: 2800,
+                        count: 2,
+                        destinataires: {
+                            'GROUPE INDUSTRIEL': {
+                                total: 2800,
+                                count: 2,
+                                monthlyFrequency: new Set(['2023-02', '2023-03']),
+                                operations: [
+                                    {
+                                        date: '25/02/2023',
+                                        numero: 'OP123518',
+                                        libelle: 'LCR GROUPE INDUSTRIEL REGLEMENT',
+                                        montant: 1400,
+                                        Nom_DT: 'GROUPE INDUSTRIEL',
+                                        IBAN_DT: 'FR7630001007947777777777777',
+                                        Libelle_remise: 'Règlement fournisseur',
+                                        Libelle_operation: 'LCR'
+                                    },
+                                    {
+                                        date: '25/03/2023',
+                                        numero: 'OP123519',
+                                        libelle: 'LCR GROUPE INDUSTRIEL REGLEMENT',
+                                        montant: 1400,
+                                        Nom_DT: 'GROUPE INDUSTRIEL',
+                                        IBAN_DT: 'FR7630001007947777777777777',
+                                        Libelle_remise: 'Règlement fournisseur',
+                                        Libelle_operation: 'LCR'
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    // PRLV - Non croisé
+                    'PRLV': {
+                        total: 900,
+                        count: 3,
+                        destinataires: {
+                            'CLUB SPORTIF': {
+                                total: 900,
+                                count: 3,
+                                monthlyFrequency: new Set(['2023-01', '2023-02', '2023-03']),
+                                operations: [
+                                    {
+                                        date: '01/01/2023',
+                                        numero: 'OP123520',
+                                        libelle: 'PRLV CLUB SPORTIF COTISATION',
+                                        montant: 300,
+                                        Nom_DT: 'CLUB SPORTIF',
+                                        IBAN_DT: 'FR7630004000010000000000000',
+                                        Libelle_remise: 'Cotisation mensuelle',
+                                        Libelle_operation: 'PRLV'
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                },
+                metrics: {
+                    totalCredit: 58250,
+                    totalDebit: 38500,
+                    creditCount: 40,
+                    debitCount: 25,
+                    largestTransaction: 5000
+                }
+            };
+
+            // Copier les données originales pour les filtres
+            filteredAnalysisData = JSON.parse(JSON.stringify(originalAnalysisData));
+           
+            // Mettre à jour l'interface avec les données d'exemple
+            updateUI();
+            generateConclusion();
+            generateSynthese();
+            generateTypeOperations();
+            generateComplianceAnalysis();
+            
+            // Afficher les exemples illustratifs pour les typologies suspectes
+            displayAMLAlerts([]);
+            updateRapportSynthese();
+
+            console.log("Données d'exemple complètes chargées avec succès");
+        }
+
+        // Fonction pour afficher les exemples de typologies suspectes
+        function displayAMLAlerts(alerts) {
+            const amlAlertsContainer = document.getElementById('aml-alerts');
+            
+            const exempleAlerts = `
+                <div class="alert-section">
+                    <h4 style="color: #dc3545; margin-bottom: 1rem;">🚨 Exemple de Risque de Blanchiment de Capitaux</h4>
+                    <ul style="padding-left: 1.5rem; margin-bottom: 2rem;">
+                        <li style="margin-bottom: 0.5rem;">Dépôts d'espèces répétés juste en dessous des seuils de déclaration obligatoire (ex: 9 500€ multiples)</li>
+                        <li style="margin-bottom: 0.5rem;">Virements entrants depuis des juridictions à risque sans justification économique claire</li>
+                        <li style="margin-bottom: 0.5rem;">Multiples opérations de faible montant qui, agrégées, dépassent significativement le chiffre d'affaires déclaré</li>
+                        <li style="margin-bottom: 0.5rem;">Flux circulaires entre plusieurs entités sans finalité économique apparente</li>
+                    </ul>
+
+                    <h4 style="color: #ff6b00; margin-bottom: 1rem;">🧾 Exemple de Risque de Fraude à la TVA</h4>
+                    <ul style="padding-left: 1.5rem;">
+                        <li style="margin-bottom: 0.5rem;">Chaîne de transactions entre plusieurs sociétés écrans (carrousel de TVA)</li>
+                        <li style="margin-bottom: 0.5rem;">Facturations suspectes avec des montants incohérents par rapport aux services rendus</li>
+                        <li style="margin-bottom: 0.5rem;">Déductions de TVA sur des opérations avec des contreparties établies dans des paradis fiscaux</li>
+                        <li style="margin-bottom: 0.5rem;">Absence de réalité économique derrière les transactions facturées</li>
+                    </ul>
+
+                    <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 1rem; margin-top: 1.5rem;">
+                        <p style="margin: 0; font-style: italic; color: #856404;">
+                            💡 <strong>Note :</strong> Ces exemples sont fournis à titre illustratif. 
+                            Les alertes réelles apparaîtront ici après analyse de vos données spécifiques.
+                        </p>
+                    </div>
+                </div>
+            `;
+
+            amlAlertsContainer.innerHTML = exempleAlerts;
+        }
+
+        // Fonction pour générer la conclusion avec exemple
+        function generateConclusion() {
+            const formatMontant = (valeur) => formatter.format(valeur);
+
+            function generateSynthesis(type, data) {
+                const typeLabel = type === 'credit' ? 'crédit' : 'débit';
+                const totalAmount = Object.values(data).reduce((sum, typo) => sum + typo.total, 0);
+                const fluxDirection = type === 'credit' ? 'depuis le compte bancaire' : 'vers le compte bancaire';
+
+                let html = `<p>Pour la période analysée, un total de ${typeLabel} a été enregistré, représentant un montant global de ${formatMontant(totalAmount)}.</p>`;
+
+                Object.entries(data).sort((a, b) => b[1].total - a[1].total).forEach(([typologie, bloc]) => {
+                    html += `
+                        <h4 style="color: #4B0D3A; margin-top: 1.5em;">${remplacerTypologie(typologie)}</h4>
+                        <p style="font-size: 15px;">
+                            ${bloc.count} opérations, pour un montant de ${formatMontant(bloc.total)}.
+                        </p>`;
+
+                    Object.entries(bloc.destinataires)
+                        .sort((a, b) => b[1].total - a[1].total)
+                        .slice(0, 10)
+                        .forEach(([nom, d]) => {
+                            const opList = d.operations;
+                            const firstOp = opList[0] || {};
+                           
+                            // Liste des typologies où on ne veut pas afficher IBAN et motif
+                            const typologiesSansDetails = ['CARTE', 'CHQ', 'ESP', 'CB', 'DAB'];
+                            const doitAfficherDetails = !typologiesSansDetails.includes(typologie.toUpperCase());
+                           
+                            // Gestion robuste des dates
+                            let dateInfo = '';
+                            const validDates = [];
+                           
+                            // Collecte des dates valides
+                            opList.forEach(op => {
+                                try {
+                                    if (op.date && typeof op.date === 'string') {
+                                        const [day, month, year] = op.date.split('/');
+                                        const dateObj = new Date(`${year}-${month}-${day}`);
+                                        if (!isNaN(dateObj)) validDates.push(dateObj);
+                                    }
+                                } catch (e) {
+                                    console.warn('Date invalide ignorée', op.date);
+                                }
+                            });
+
+                            // Formatage de l'information de date
+                            if (validDates.length > 0) {
+                                const minDate = new Date(Math.min(...validDates));
+                                const maxDate = new Date(Math.max(...validDates));
+                               
+                                if (minDate.toDateString() === maxDate.toDateString()) {
+                                    dateInfo = `à la date du ${minDate.toLocaleDateString('fr-FR')}`;
+                                } else {
+                                    dateInfo = `du ${minDate.toLocaleDateString('fr-FR')} au ${maxDate.toLocaleDateString('fr-FR')}`;
+                                }
+                            }
+
+                            // Construction de la phrase selon la typologie
+                            let operationText = `<b>${nom}</b> : ${d.count} opérations, pour un montant de ${formatMontant(d.total)}`;
+                           
+                            if (doitAfficherDetails) {
+                                const iban = firstOp.IBAN_DT || firstOp.IBAN_DO || 'manquant';
+                                const motif = firstOp.Motif || 'divers ou manquant voir le détail des opérations';
+                                operationText += `, émises ${fluxDirection} dont l'IBAN est ${iban}, pour motif : ${motif}`;
+                            }
+                           
+                            if (dateInfo) {
+                                operationText += `, ${dateInfo}`;
+                            }
+                           
+                            html += `<p style="margin-left: 1em; font-size: 14px; line-height: 1.5;">${operationText}.</p>`;
+                        });
+                });
+
+                return html;
+            }
+
+            document.getElementById('flux-entrant-details').innerHTML = generateSynthesis('credit', filteredAnalysisData.credits);
+            document.getElementById('flux-sortant-details').innerHTML = generateSynthesis('debit', filteredAnalysisData.debits);
+
+            // Texte d'exemple pour la conclusion synthétique
+            const exempleConclusion = `
+                <h3 style="color: var(--primary); margin-bottom: 1rem;">Exemple de Conclusion Synthétique</h3>
+                
+                <p><strong>Analyse des flux financiers - Période : Janvier à Mars 2024</strong></p>
+                
+                <p>L'examen des flux bancaires révèle une activité principalement centrée sur des opérations de virement SEPA, 
+                avec un volume total de 245 000€ réparti sur 156 opérations. Les flux entrants (145 000€) proviennent 
+                majoritairement de clients situés en France, tandis que les flux sortants (100 000€) concernent 
+                principalement des fournisseurs européens.</p>
+                
+                <p><strong>Points de vigilance identifiés :</strong></p>
+                <ul>
+                    <li>Concentration de 65% des encaissements sur 3 clients principaux</li>
+                    <li>Présence de virements internationaux vers la Suisse nécessitant documentation complémentaire</li>
+                    <li>Absence d'opérations en espèces constatée</li>
+                </ul>
+                
+                <p><strong>Recommandations :</strong></p>
+                <ul>
+                    <li>Vérification de la documentation des relations d'affaires avec les contreparties internationales</li>
+                    <li>Surveillance renforcée des concentrations clientèle</li>
+                    <li>Mise à jour du profil de risque client</li>
+                </ul>
+                
+                <p style="margin-top: 1rem; font-style: italic;">
+                    Cette conclusion est fournie à titre d'exemple. Le rapport défautif sera généré après analyse de vos données réelles.
+                </p>
+            `;
+
+            document.getElementById('synthese-finale').innerHTML = exempleConclusion;
+        }
+
+        // Le reste des fonctions JavaScript reste inchangé...
+        // [Toutes les autres fonctions JavaScript précédentes]
+
+        // Fonction pour basculer entre les onglets
+        function showTab(tabId) {
+            // Masquer tous les onglets
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Désactiver tous les boutons d'onglet
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            // Activer l'onglet sélectionné
+            document.getElementById(tabId).classList.add('active');
+            
+            // Activer le bouton correspondant
+            document.querySelector(`.tab-button[onclick="showTab('${tabId}')"]`).classList.add('active');
+        }
+
+        // Fonction pour appliquer les filtres
+        function applyFilters() {
+            const keyword = document.getElementById('filter-keyword').value.toLowerCase();
+            const typologie = document.getElementById('filter-typologie').value.toLowerCase();
+            const libelle = document.getElementById('filter-libelle').value.toLowerCase();
+            const operation = document.getElementById('filter-operation').value.toLowerCase();
+            const startDate = document.getElementById('filter-start-date').value;
+            const endDate = document.getElementById('filter-end-date').value;
+            const fluxType = document.getElementById('filter-flux-type').value;
+            const minAmount = parseFloat(document.getElementById('filter-min-amount').value) || 0;
+            const maxAmount = parseFloat(document.getElementById('filter-max-amount').value) || Infinity;
+
+            // Copie profonde des données originales
+            filteredAnalysisData = JSON.parse(JSON.stringify(originalAnalysisData));
+
+            // Filtrer les crédits
+            if (fluxType === 'tous' || fluxType === 'entrants') {
+                filteredAnalysisData.credits = filterDataByType(originalAnalysisData.credits, keyword, typologie, libelle, operation, startDate, endDate, minAmount, maxAmount);
+            } else {
+                filteredAnalysisData.credits = {};
+            }
+
+            // Filtrer les débits
+            if (fluxType === 'tous' || fluxType === 'sortants') {
+                filteredAnalysisData.debits = filterDataByType(originalAnalysisData.debits, keyword, typologie, libelle, operation, startDate, endDate, minAmount, maxAmount);
+            } else {
+                filteredAnalysisData.debits = {};
+            }
+
+            // Mettre à jour l'UI
+            updateUI();
+            generateConclusion();
+            generateSynthese();
+            generateTypeOperations();
+            generateComplianceAnalysis();
+            updateRapportSynthese();
+
+            // Afficher les résultats du filtre
+            const resultsContainer = document.getElementById('filter-results');
+            const creditCount = Object.values(filteredAnalysisData.credits).reduce((sum, typo) => sum + typo.count, 0);
+            const debitCount = Object.values(filteredAnalysisData.debits).reduce((sum, typo) => sum + typo.count, 0);
+
+            if (creditCount + debitCount === 0) {
+                resultsContainer.innerHTML = `
+                    <div class="no-results">
+                        <i class="fas fa-search" style="font-size: 3rem; color: #ccc; margin-bottom: 1rem;"></i>
+                        <p>Aucune opération ne correspond à vos critères de filtrage.</p>
+                    </div>
+                `;
+            } else {
+                resultsContainer.innerHTML = `
+                    <div style="background-color: #f8f9fa; border-radius: 8px; padding: 1.5rem;">
+                        <h3 style="color: var(--primary); margin-bottom: 1rem;">Résultats du filtrage</h3>
+                        <p><strong>${creditCount + debitCount}</strong> opérations correspondent à vos critères :</p>
+                        <ul style="text-align: left; margin-top: 1rem;">
+                            <li>${creditCount} opérations créditrices</li>
+                            <li>${debitCount} opérations débitrices</li>
+                        </ul>
+                        <p style="margin-top: 1rem; font-style: italic;">Les résultats sont visibles dans tous les onglets.</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Fonction pour réinitialiser les filtres
+        function resetFilters() {
+            // Réinitialiser les champs de formulaire
+            document.getElementById('filter-keyword').value = '';
+            document.getElementById('filter-typologie').value = '';
+            document.getElementById('filter-libelle').value = '';
+            document.getElementById('filter-operation').value = '';
+            document.getElementById('filter-start-date').value = '';
+            document.getElementById('filter-end-date').value = '';
+            document.getElementById('filter-flux-type').value = 'tous';
+            document.getElementById('filter-min-amount').value = '';
+            document.getElementById('filter-max-amount').value = '';
+
+            // Restaurer les données originales
+            filteredAnalysisData = JSON.parse(JSON.stringify(originalAnalysisData));
+
+            // Mettre à jour l'UI
+            updateUI();
+            generateConclusion();
+            generateSynthese();
+            generateTypeOperations();
+            generateComplianceAnalysis();
+            updateRapportSynthese();
+
+            // Réinitialiser l'affichage des résultats
+            document.getElementById('filter-results').innerHTML = `
+                <div class="no-results">
+                    <i class="fas fa-filter" style="font-size: 3rem; color: #ccc; margin-bottom: 1rem;"></i>
+                    <p>Aucun filtre appliqué. Configurez vos critères et cliquez sur "Appliquer les filtres".</p>
+                </div>
+            `;
+        }
+
+        // Fonction pour filtrer les données par type
+        function filterDataByType(data, keyword, typologie, libelle, operation, startDate, endDate, minAmount, maxAmount) {
+            let result = {};
+
+            for (const [typoKey, typoData] of Object.entries(data)) {
+                // Vérifier si la typologie correspond au filtre
+                if (typologie && !typoKey.toLowerCase().includes(typologie)) {
+                    continue;
+                }
+               
+                let filteredTypo = { ...typoData, destinataires: {} };
+               
+                for (const [destKey, destData] of Object.entries(typoData.destinataires)) {
+                    let filteredDest = { ...destData, operations: [] };
+                   
+                    for (const op of destData.operations) {
+                        let match = true;
+                       
+                        // Vérifier le mot-clé
+                        if (keyword) {
+                            let found = false;
+                            for (let key in op) {
+                                if (op[key] && op[key].toString().toLowerCase().includes(keyword)) {
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            if (!found) match = false;
+                        }
+                       
+                        // Vérifier le libellé
+                        if (libelle && op.libelle && !op.libelle.toLowerCase().includes(libelle)) {
+                            match = false;
+                        }
+                       
+                        // Vérifier le numéro d'opération
+                        if (operation && op.numero && !op.numero.toLowerCase().includes(operation)) {
+                            match = false;
+                        }
+                       
+                        // Vérifier les dates
+                        if (startDate || endDate) {
+                            const opDate = parseDateString(op.date.split('/').reverse().join('-'));
+                            if (!opDate) continue; // Ignore les opérations sans date valide
+                           
+                            if (startDate && new Date(startDate) > opDate) {
+                                match = false;
+                            }
+                            if (endDate && new Date(endDate) < opDate) {
+                                match = false;
+                            }
+                        }
+                       
+                        // Vérifier le montant
+                        if (op.montant < minAmount || op.montant > maxAmount) {
+                            match = false;
+                        }
+                       
+                        if (match) {
+                            filteredDest.operations.push(op);
+                        }
+                    }
+                   
+                    // Si on a des opérations après filtrage, on conserve le destinataire
+                    if (filteredDest.operations.length > 0) {
+                        // Mettre à jour le total et le count du destinataire
+                        filteredDest.total = filteredDest.operations.reduce((sum, op) => sum + op.montant, 0);
+                        filteredDest.count = filteredDest.operations.length;
+                        filteredTypo.destinataires[destKey] = filteredDest;
+                    }
+                }
+               
+                // Si la typologie a encore des destinataires, on la conserve
+                if (Object.keys(filteredTypo.destinataires).length > 0) {
+                    // Mettre à jour le total et le count de la typologie
+                    filteredTypo.total = Object.values(filteredTypo.destinataires).reduce((sum, dest) => sum + dest.total, 0);
+                    filteredTypo.count = Object.values(filteredTypo.destinataires).reduce((sum, dest) => sum + dest.count, 0);
+                    result[typoKey] = filteredTypo;
+                }
+            }
+
+            return result;
+        }
+
+        // Fonction pour parser les dates
+        function parseDateString(dateStr) {
+            if (!dateStr) return null;
+           
+            // Si c'est déjà un objet Date
+            if (dateStr instanceof Date) return dateStr;
+           
+            // Si c'est un nombre (date Excel)
+            if (typeof dateStr === 'number') return excelDateToJSDate(dateStr);
+           
+            // Essayez différents formats de date texte
+            try {
+                // Format français DD/MM/YYYY
+                const parts = dateStr.split('/');
+                if (parts.length === 3) {
+                    return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+                }
+               
+                // Format ISO (YYYY-MM-DD)
+                if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                    return new Date(dateStr);
+                }
+               
+                // Autres formats possibles
+                return new Date(dateStr);
+            } catch (e) {
+                console.warn('Date invalide:', dateStr);
+                return null;
+            }
+        }
+
+        // Fonction pour convertir les dates Excel
+        function excelDateToJSDate(serial) {
+            if (!serial || isNaN(serial)) return null;
+            const utcDays = Math.floor(serial - 25569);
+            const utcValue = utcDays * 86400;
+            const date = new Date(utcValue * 1000);
+            return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        }
+
+        // Fonction pour remplacer les typologies abrégées
+        function remplacerTypologie(abr) {
+            const mapping = {
+                'VIR SEPA': 'Virements SEPA',
+                'VIR NON': 'Virements hors SEPA',
+                'NON SEPA': 'Virements hors SEPA',
+                'VIR IP': 'Virements Instantanés',
+                'PRLV SEPA': 'Prélèvements SEPA',
+                'PRLV SDD': 'Prélèvements SDD',
+                'PRLV': 'Prélèvements',
+                'P INST': 'Paiement instantané',
+                'CB': 'Paiements carte',
+                'CHQ': 'Chèque',
+                'Chq': 'Chèque',
+                'ESP': 'Espèces',
+                'DPO': 'Dépôts',
+                'TRF': 'Transferts internes',
+                'FAC': 'Factures',
+                'LCR': 'Lettres de change'
+            };
+
+            if (mapping[abr]) return mapping[abr];
+            if (abr.toUpperCase().startsWith('VIR')) return 'Virements';
+            if (abr.toUpperCase().startsWith('PRLV')) return 'Prélèvements';
+            if (abr.toUpperCase().startsWith('CHQ')) return 'Chèques';
+            if (abr.toUpperCase().startsWith('ESP')) return 'Espèces';
+            if (abr.toUpperCase().startsWith('CB')) return 'Paiements carte';
+
+            return abr;
+        }
+
+        // Fonction pour obtenir la typologie
+        function getTypologie(libelle) {
+            const mots = libelle.split(' ');
+            if (mots[0] === 'CARTE') return 'CARTE';
+            if (libelle.includes('CHQ') && !libelle.includes('REJET')) return 'CHQ';
+            if (libelle.includes('NON SEPA')) return 'NON SEPA';
+            return mots.slice(0, 2).join(' ');
+        }
+
+        // Fonction pour nettoyer le nom du destinataire
+        function cleanDestinataire(name, isCarte = false) {
+            if (isCarte) {
+                return name.split(' ').filter(word => /^[a-zA-Z]+$/.test(word)).join(' ').trim();
+            }
+            return name.split(' ').filter(word => !SUFFIXES_JURIDIQUES.includes(word.toUpperCase()) && !word.match(/ETR|[0-9]/i)).slice(0, 4).join(' ').replace(/\d{2}\/\d{2}\/\d{4}/, '').replace(/[^a-zA-Z ]/g, '').trim();
+        }
+
+        // Fonction pour mettre à jour l'interface
+        function updateUI() {
+            generateStructuredTable('flux-entrant', filteredAnalysisData.credits, 'Flux Entrant');
+            generateStructuredTable('flux-sortant', filteredAnalysisData.debits, 'Flux Sortant');
+        }
+
+        // Fonction pour générer les tableaux structurés
+        function generateStructuredTable(containerId, data, title) {
+            let html = `<h3>${title}</h3>`;
+            
+            if (Object.keys(data).length === 0) {
+                html += `<p style="text-align: center; color: #666; font-style: italic;">Aucune donnée à afficher pour ce type de flux.</p>`;
+            } else {
+                Object.entries(data).sort((a, b) => b[1].total - a[1].total).forEach(([typologie, typoData]) => {
+                    html += `
+                        <div class="typologie-group">
+                            <div class="typologie-header" onclick="toggleTypologie(this)">
+                                <span><i class="fas fa-chevron-down"></i> ${remplacerTypologie(typologie)}</span>
+                                <span>${typoData.count} opérations • ${formatter.format(typoData.total)}</span>
+                            </div>
+                            <div class="typologie-content" style="display:none">
+                                <div class="sous-typologie-row sous-typologie-header">
+                                    <div></div>
+                                    <div>Date</div>
+                                    <div>N° Op</div>
+                                    <div>Destinataire</div>
+                                    <div>Total</div>
+                                    <div>Opérations</div>
+                                    <div>Fréquence Mensuelle</div>
+                                </div>
+                                ${Object.entries(typoData.destinataires).sort((a, b) => b[1].total - a[1].total).map(([dest, data]) => `
+                                    <div class="sous-typologie-row" onclick="toggleDetails(this)">
+                                        <div><i class="fas fa-chevron-down"></i></div>
+                                        <div>${data.operations[0].date}</div>
+                                        <div>${data.operations[0].numero}</div>
+                                        <div>${dest}</div>
+                                        <div>${formatter.format(data.total)}</div>
+                                        <div>${data.count}</div>
+                                        <div>sur une durée de ${data.monthlyFrequency.size} mois</div>
+                                    </div>
+                                    <div class="expanded-details" style="display:none">
+                                        ${data.operations.map(op => `
+                                            <div class="transaction-detail">
+                                                <div>${op.date}</div>
+                                                <div>${op.numero}</div>
+                                                <div>
+                                                    ${op.libelle}
+                                                    ${op.IBAN_DO ? `<div><b>IBAN D.O.:</b> ${op.IBAN_DO}</div>` : ''}
+                                                    ${op.Motif ? `<div><b>Motif:</b> ${op.Motif}</div>` : ''}
+                                                    ${op.Adresse1_DO ? `<div><b>Adresse 1:</b> ${op.Adresse1_DO}</div>` : ''}
+                                                    ${op.Adresse2_DO ? `<div><b>Adresse 2:</b> ${op.Adresse2_DO}</div>` : ''}
+                                                    ${op.Nom_DT ? `<div><b>Nom D.T.:</b> ${op.Nom_DT}</div>` : ''}
+                                                    ${op.IBAN_DT ? `<div><b>IBAN D.T.:</b> ${op.IBAN_DT}</div>` : ''}
+                                                    ${op.Libelle_remise ? `<div><b>Remise:</b> ${op.Libelle_remise}</div>` : ''}
+                                                    ${op.Libelle_operation ? `<div><b>Opération:</b> ${op.Libelle_operation}</div>` : ''}
+                                                </div>
+                                                <div>${formatter.format(op.montant)}</div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>`;
+                });
+            }
+            document.getElementById(containerId).innerHTML = html;
+        }
+
+        // Fonction pour mettre à jour le rapport de synthèse
+        function updateRapportSynthese() {
+            const totalCredit = Object.values(filteredAnalysisData.credits).reduce((sum, typo) => sum + typo.total, 0);
+            const totalDebit = Object.values(filteredAnalysisData.debits).reduce((sum, typo) => sum + typo.total, 0);
+            const creditCount = Object.values(filteredAnalysisData.credits).reduce((sum, typo) => sum + typo.count, 0);
+            const debitCount = Object.values(filteredAnalysisData.debits).reduce((sum, typo) => sum + typo.count, 0);
+           
+            document.getElementById('total-credit').textContent = `Au crédit, nous avons relevé ${creditCount} opérations pour un total de ${formatter.format(totalCredit)}`;
+            document.getElementById('total-debit').textContent = `Au débit, nous avons relevé ${debitCount} opérations pour un total de ${formatter.format(totalDebit)}`;
+           
+            // Générer les flux croisés
+            document.getElementById('flux-croises').innerHTML = generateFluxCroisesSection();
+           
+            // Générer les top crédits et débits
+            const topCredits = Object.entries(filteredAnalysisData.credits)
+                .flatMap(([typologie, typoData]) =>
+                    Object.entries(typoData.destinataires).map(([dest, destData]) => ({
+                        typologie,
+                        dest,
+                        total: destData.total,
+                        count: destData.count
+                    }))
+                )
+                .sort((a, b) => b.total - a.total)
+                .slice(0, 10);
+
+            const topDebits = Object.entries(filteredAnalysisData.debits)
+                .flatMap(([typologie, typoData]) =>
+                    Object.entries(typoData.destinataires).map(([dest, destData]) => ({
+                        typologie,
+                        dest,
+                        total: destData.total,
+                        count: destData.count
+                    }))
+                )
+                .sort((a, b) => b.total - a.total)
+                .slice(0, 10);
+
+            document.getElementById('top-credits').innerHTML = topCredits.map(item =>
+                `<li><span class="positive">${formatter.format(item.total)}</span> - ${item.dest} (${remplacerTypologie(item.typologie)})</li>`
+            ).join('');
+
+            document.getElementById('top-debits').innerHTML = topDebits.map(item =>
+                `<li><span class="negative">${formatter.format(item.total)}</span> - ${item.dest} (${remplacerTypologie(item.typologie)})</li>`
+            ).join('');
+        }
+
+        // Fonction pour générer les flux croisés
+        function generateFluxCroisesSection() {
+            const credits = getAllDestinataires(filteredAnalysisData.credits);
+            const debits = getAllDestinataires(filteredAnalysisData.debits);
+
+            const croises = Object.keys(credits).filter(key => debits[key]);
+
+            if (croises.length === 0) {
+                return `<div style="font-style:italic;color:#888;">Aucun flux croisé détecté sur la période.</div>`;
+            }
+
+            let html = `
+                <table style="width:100%;border-collapse:collapse;margin-bottom:2em;">
+                    <thead>
+                        <tr style="background:#f1f1f1;">
+                            <th style="padding:8px;">Nom</th>
+                            <th style="padding:8px;">Types d'opérations (Entrant)</th>
+                            <th style="padding:8px;">Montant Entrant</th>
+                            <th style="padding:8px;">Types d'opérations (Sortant)</th>
+                            <th style="padding:8px;">Montant Sortant</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            croises.forEach(key => {
+                const noms = Array.from(new Set([...credits[key].noms, ...debits[key].noms])).join(', ');
+                const typesCredit = Array.from(credits[key].types).join(', ');
+                const typesDebit = Array.from(debits[key].types).join(', ');
+                html += `
+                    <tr>
+                        <td style="padding:8px;font-weight:bold;">${noms}</td>
+                        <td style="padding:8px;">${typesCredit}</td>
+                        <td style="padding:8px;color:#27ae60;font-weight:bold;">${formatter.format(credits[key].total)}</td>
+                        <td style="padding:8px;">${typesDebit}</td>
+                        <td style="padding:8px;color:#e74c3c;font-weight:bold;">${formatter.format(debits[key].total)}</td>
+                    </tr>
+                `;
+            });
+
+            html += `</tbody></table>`;
+            return html;
+        }
+
+        // Fonction pour obtenir tous les destinataires
+        function getAllDestinataires(data) {
+            const map = {};
+            Object.entries(data).forEach(([typologie, typoData]) => {
+                Object.entries(typoData.destinataires).forEach(([dest, destData]) => {
+                    const key = normalizeName(dest);
+                    if (!map[key]) {
+                        map[key] = { noms: new Set(), types: new Set(), total: 0, count: 0, details: [] };
+                    }
+                    map[key].noms.add(dest);
+                    map[key].types.add(typologie);
+                    map[key].total += destData.total;
+                    map[key].count += destData.count;
+                    destData.operations.forEach(op => {
+                        map[key].details.push({ typologie, ...op });
+                    });
+                });
+            });
+            return map;
+        }
+
+        // Fonction pour normaliser les noms
+        function normalizeName(name) {
+            return name
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                .replace(/[\s\.\-']/g, "")
+                .toLowerCase();
+        }
+
+        // Fonction pour générer la synthèse
+        function generateSynthese() {
+            const rapport = document.getElementById('rapport-synthese');
+            let html = `
+                <div style="display: flex; gap: 2rem;">
+                    <div style="flex: 1;">
+                        <h3 style="color: #e74c3c;">Débits</h3>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background-color: #f1f1f1;">
+                                    <th style="text-align: left; padding: 8px;">Destinataire</th>
+                                    <th style="text-align: center; padding: 8px;">Opérations</th>
+                                    <th style="text-align: right; padding: 8px;">Montant</th>
+                                    <th style="text-align: center; padding: 8px;">Durée</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+            `;
+
+            let debitRows = [];
+            Object.entries(filteredAnalysisData.debits).forEach(([typologie, typoData]) => {
+                Object.entries(typoData.destinataires).forEach(([dest, destData]) => {
+                    debitRows.push({
+                        dest,
+                        count: destData.count,
+                        total: destData.total,
+                        duree: destData.monthlyFrequency.size
+                    });
+                });
+            });
+            debitRows.sort((a, b) => b.total - a.total);
+
+            debitRows.forEach((item, index) => {
+                const backgroundColor = index % 2 === 0 ? '#ffffff' : '#f9f9f9';
+                html += `
+                    <tr style="background-color: ${backgroundColor};">
+                        <td style="padding: 8px; font-weight: bold;">${item.dest}</td>
+                        <td style="text-align: center; padding: 8px; font-weight: bold;">${item.count}</td>
+                        <td style="text-align: right; padding: 8px; font-weight: bold; color: #e74c3c;">${formatter.format(item.total)}</td>
+                        <td style="text-align: center; padding: 8px;">${item.duree} mois</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div style="flex: 1;">
+                        <h3 style="color: #27ae60;">Crédits</h3>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background-color: #f1f1f1;">
+                                    <th style="text-align: left; padding: 8px;">Destinataire</th>
+                                    <th style="text-align: center; padding: 8px;">Opérations</th>
+                                    <th style="text-align: right; padding: 8px;">Montant</th>
+                                    <th style="text-align: center; padding: 8px;">Durée</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+            `;
+
+            let creditRows = [];
+            Object.entries(filteredAnalysisData.credits).forEach(([typologie, typoData]) => {
+                Object.entries(typoData.destinataires).forEach(([dest, destData]) => {
+                    creditRows.push({
+                        dest,
+                        count: destData.count,
+                        total: destData.total,
+                        duree: destData.monthlyFrequency.size
+                    });
+                });
+            });
+            creditRows.sort((a, b) => b.total - a.total);
+
+            creditRows.forEach((item, index) => {
+                const backgroundColor = index % 2 === 0 ? '#ffffff' : '#f9f9f9';
+                html += `
+                    <tr style="background-color: ${backgroundColor};">
+                        <td style="padding: 8px; font-weight: bold;">${item.dest}</td>
+                        <td style="text-align: center; padding: 8px; font-weight: bold;">${item.count}</td>
+                        <td style="text-align: right; padding: 8px; font-weight: bold; color: #27ae60;">${formatter.format(item.total)}</td>
+                        <td style="text-align: center; padding: 8px;">${item.duree} mois</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+
+            rapport.innerHTML = html;
+        }
+
+        // Fonction pour générer les types d'opérations
+        function generateTypeOperations() {
+            const container = document.getElementById('type-operations');
+            let html = `
+                <div style="display: flex; gap: 2rem;">
+                    <div style="flex: 1;">
+                        <h3 style="color: #e74c3c;">Débits</h3>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background-color: #f1f1f1;">
+                                    <th style="text-align: left; padding: 8px;">Typologie</th>
+                                    <th style="text-align: center; padding: 8px;">Opérations</th>
+                                    <th style="text-align: right; padding: 8px;">Montant</th>
+                                    <th style="text-align: center; padding: 8px;">Durée</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+            `;
+
+            let debitTypes = [];
+            Object.entries(filteredAnalysisData.debits).forEach(([typologie, typoData]) => {
+                debitTypes.push({
+                    typologie,
+                    count: typoData.count,
+                    total: typoData.total,
+                    duree: typoData.monthlyFrequency ? typoData.monthlyFrequency.size : 0
+                });
+            });
+            debitTypes.sort((a, b) => b.total - a.total);
+
+            debitTypes.forEach((item, index) => {
+                const backgroundColor = index % 2 === 0 ? '#ffffff' : '#f9f9f9';
+                html += `
+                    <tr style="background-color: ${backgroundColor};">
+                        <td style="padding: 8px; font-weight: bold;">${remplacerTypologie(item.typologie)}</td>
+                        <td style="text-align: center; padding: 8px; font-weight: bold;">${item.count}</td>
+                        <td style="text-align: right; padding: 8px; font-weight: bold; color: #e74c3c;">${formatter.format(item.total)}</td>
+                        <td style="text-align: center; padding: 8px;">${item.duree} mois</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div style="flex: 1;">
+                        <h3 style="color: #27ae60;">Crédits</h3>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background-color: #f1f1f1;">
+                                    <th style="text-align: left; padding: 8px;">Typologie</th>
+                                    <th style="text-align: center; padding: 8px;">Opérations</th>
+                                    <th style="text-align: right; padding: 8px;">Montant</th>
+                                    <th style="text-align: center; padding: 8px;">Durée</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+            `;
+
+            let creditTypes = [];
+            Object.entries(filteredAnalysisData.credits).forEach(([typologie, typoData]) => {
+                creditTypes.push({
+                    typologie,
+                    count: typoData.count,
+                    total: typoData.total,
+                    duree: typoData.monthlyFrequency ? typoData.monthlyFrequency.size : 0
+                });
+            });
+            creditTypes.sort((a, b) => b.total - a.total);
+
+            creditTypes.forEach((item, index) => {
+                const backgroundColor = index % 2 === 0 ? '#ffffff' : '#f9f9f9';
+                html += `
+                    <tr style="background-color: ${backgroundColor};">
+                        <td style="padding: 8px; font-weight: bold;">${remplacerTypologie(item.typologie)}</td>
+                        <td style="text-align: center; padding: 8px; font-weight: bold;">${item.count}</td>
+                        <td style="text-align: right; padding: 8px; font-weight: bold; color: #27ae60;">${formatter.format(item.total)}</td>
+                        <td style="text-align: center; padding: 8px;">${item.duree} mois</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        // Fonction pour générer l'analyse de conformité
+        function generateComplianceAnalysis() {
+            const complianceTextContainer = document.getElementById('compliance-text');
+
+            const totalCredit = Object.values(filteredAnalysisData.credits).reduce((sum, typo) => sum + typo.total, 0);
+            const totalDebit = Object.values(filteredAnalysisData.debits).reduce((sum, typo) => sum + typo.total, 0);
+            const creditCount = Object.values(filteredAnalysisData.credits).reduce((sum, typo) => sum + typo.count, 0);
+            const debitCount = Object.values(filteredAnalysisData.debits).reduce((sum, typo) => sum + typo.count, 0);
+            const totalOperations = creditCount + debitCount;
+            const ratioFlux = totalCredit / totalDebit;
+
+            const nbTypologiesCredit = Object.keys(filteredAnalysisData.credits).length;
+            const nbTypologiesDebit = Object.keys(filteredAnalysisData.debits).length;
+
+            const topCredits = Object.entries(filteredAnalysisData.credits)
+                .map(([typologie, data]) => ({ typologie, total: data.total }))
+                .sort((a, b) => b.total - a.total)
+                .slice(0, 5);
+
+            const topDebits = Object.entries(filteredAnalysisData.debits)
+                .map(([typologie, data]) => ({ typologie, total: data.total }))
+                .sort((a, b) => b.total - a.total)
+                .slice(0, 5);
+
+            const maxTransaction = filteredAnalysisData.metrics.largestTransaction;
+            const pourcentageCredits = ((creditCount / totalOperations) * 100).toFixed(2);
+            const pourcentageDebits = ((debitCount / totalOperations) * 100).toFixed(2);
+
+            let html = `
+                <p>Observations :</p>
+                <ul>
+                    <li><b>${nbTypologiesCredit}</b> typologies créditrices</li>
+                    <li><b>${nbTypologiesDebit}</b> typologies débitrices</li>
+                    <li>Transaction maximale : <b>${formatter.format(maxTransaction)}</b></li>
+                    <li>Pourcentage des opérations créditrices : <b>${pourcentageCredits}%</b></li>
+                    <li>Pourcentage des opérations débitrices : <b>${pourcentageDebits}%</b></li>
+                </ul>
+                <p>Top 5 des créditeurs :</p>
+                <ul>
+                    ${topCredits.map(item => `<li>${remplacerTypologie(item.typologie)} : <b>${formatter.format(item.total)}</b> (${((item.total / totalCredit) * 100).toFixed(2)}%)</li>`).join('')}
+                </ul>
+                <p>Top 5 des débiteurs :</p>
+                <ul>
+                    ${topDebits.map(item => `<li>${remplacerTypologie(item.typologie)} : <b>${formatter.format(item.total)}</b> (${((item.total / totalDebit) * 100).toFixed(2)}%)</li>`).join('')}
+                </ul>
+            `;
+
+            complianceTextContainer.innerHTML = html;
+        }
+
+        // Fonction pour basculer l'affichage des typologies
+        function toggleTypologie(element) {
+            const content = element.nextElementSibling;
+            content.style.display = content.style.display === 'none' ? 'block' : 'none';
+           
+            // Animation de la flèche
+            const icon = element.querySelector('i');
+            if (icon) {
+                icon.classList.toggle('fa-chevron-down');
+                icon.classList.toggle('fa-chevron-up');
+            }
+        }
+
+        // Fonction pour basculer l'affichage des détails
+        function toggleDetails(element) {
+            const details = element.nextElementSibling;
+            details.style.display = details.style.display === 'none' ? 'block' : 'none';
+           
+            // Animation de la flèche
+            const icon = element.querySelector('i');
+            if (icon) {
+                icon.classList.toggle('fa-chevron-down');
+                icon.classList.toggle('fa-chevron-up');
+            }
+        }
+
+        // Fonction pour exporter en Word
+        function exportConclusionToWord() {
+            const conclusionContent = document.getElementById('conclusion').innerHTML;
+
+            const header = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office'
+                      xmlns:w='urn:schemas-microsoft-com:office:word'
+                      xmlns='http://www.w3.org/TR/REC-html40'>
+                <head>
+                  <meta charset="utf-8">
+                  <title>Rapport AML</title>
+                  <style>
+                    body { font-family: Arial, sans-serif; }
+                    h1 { color: #0056b3; }
+                    details { margin-bottom: 15px; }
+                    summary { font-weight: bold; cursor: pointer; }
+                    .conclusion-highlight { background: #f0f8ff; padding: 15px; border-left: 4px solid #0056b3; }
+                  </style>
+                </head>
+                <body>
+            `;
+
+            const footer = `
+                </body></html>
+            `;
+
+            let cleanedContent = conclusionContent
+                .replaceAll('<details', '<div')
+                .replaceAll('</details>', '</div>')
+                .replaceAll('<summary>', '<h2>')
+                .replaceAll('</summary>', '</h2>');
+
+            const fullDocument = header + cleanedContent + footer;
+
+            const blob = new Blob(['\ufeff', fullDocument], {
+                type: 'application/msword'
+            });
+
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'Rapport_AML_Conclusion.doc';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Initialisation de l'application
+        document.addEventListener('DOMContentLoaded', function() {
+            // Charger les données d'exemple au démarrage
+            loadExampleData();
+            
+            // Configurer les gestionnaires d'événements
+            document.getElementById('analyze-btn').addEventListener('click', function() {
+                const fileInput = document.getElementById('input-excel');
+                if (fileInput.files.length === 0) {
+                    alert('Veuillez choisir un fichier Excel.');
+                    return;
+                }
+                // Ici, vous pouvez ajouter la logique pour traiter un fichier réel
+                alert('Fonctionnalité de traitement de fichier réel à implémenter');
+            });
+
+            document.getElementById('input-excel').addEventListener('change', function(e) {
+                const fileName = e.target.files[0] ? e.target.files[0].name : 'Données d\'exemple chargées';
+                document.getElementById('file-name').textContent = fileName;
+            });
+            
+            // Ajouter des flèches à tous les détails
+            document.querySelectorAll('details summary').forEach(summary => {
+                if (!summary.querySelector('.arrow-icon')) {
+                    const icon = document.createElement('i');
+                    icon.className = 'fas fa-chevron-right arrow-icon';
+                    summary.insertBefore(icon, summary.firstChild);
+                }
+            });
+            
+            // Animation des flèches
+            document.querySelectorAll('details').forEach(details => {
+                details.addEventListener('toggle', function() {
+                    const icon = this.querySelector('summary .arrow-icon');
+                    if (icon) {
+                        if (this.open) {
+                            icon.classList.add('expanded');
+                        } else {
+                            icon.classList.remove('expanded');
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
